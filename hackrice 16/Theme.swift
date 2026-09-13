@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import UIKit
+import CoreText
 
 enum Neu {
     static let canvas = Color(red: 251.0 / 255.0, green: 245.0 / 255.0, blue: 227.0 / 255.0)
@@ -17,44 +19,93 @@ enum Neu {
     static let younger = Color(red: 0.30, green: 0.62, blue: 0.50)
     static let older = Color(red: 0.78, green: 0.42, blue: 0.36)
     static let lightShadow = Color.white
-    static let darkShadow = Color(red: 0.36, green: 0.42, blue: 0.44).opacity(0.42)
+    static let darkShadow = Color(white: 0.42).opacity(0.40)
     static let highlight = Color.white.opacity(0.78)
     static let plotFill = raised
 
-    static func serif(_ size: CGFloat, weight: Font.Weight = .light) -> Font {
+    static func logo(_ size: CGFloat, weight: Font.Weight = .light) -> Font {
         .system(size: size, weight: weight, design: .serif)
     }
 
-    static func display(_ size: CGFloat) -> Font {
-        serif(size, weight: .light)
+    static func serif(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        Font.custom("Newsreader", size: size).weight(weight)
     }
 
-    static func heading(_ size: CGFloat) -> Font {
+    static func display(_ size: CGFloat) -> Font {
         serif(size, weight: .regular)
     }
 
+    static func heading(_ size: CGFloat) -> Font {
+        serif(size, weight: .medium)
+    }
+
     static func body(_ size: CGFloat = 15) -> Font {
-        .system(size: size, weight: .regular, design: .rounded)
+        styrene(size, weight: .regular)
     }
 
     static func emphasis(_ size: CGFloat) -> Font {
-        .system(size: size, weight: .medium, design: .rounded)
+        styrene(size, weight: .medium)
     }
 
     static func label(_ size: CGFloat = 12) -> Font {
-        .system(size: size, weight: .semibold, design: .rounded)
+        styrene(size, weight: .semibold)
     }
 
     static func number(_ size: CGFloat) -> Font {
-        .system(size: size, weight: .semibold, design: .rounded)
+        styrene(size, weight: .semibold)
     }
 
     static func button(_ size: CGFloat = 17) -> Font {
-        .system(size: size, weight: .semibold, design: .rounded)
+        styrene(size, weight: .semibold)
     }
 
     static func tab(_ size: CGFloat = 9, prominent: Bool = false) -> Font {
-        .system(size: size, weight: prominent ? .bold : .medium, design: .rounded)
+        styrene(size, weight: prominent ? .bold : .medium)
+    }
+
+    static func registerFonts() {
+        let names = ["Newsreader", "Newsreader-Italic", "Outfit"]
+        for name in names {
+            let url =
+                Bundle.main.url(forResource: name, withExtension: "ttf", subdirectory: "Fonts")
+                ?? Bundle.main.url(forResource: name, withExtension: "ttf")
+            guard let url else { continue }
+            CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+        }
+    }
+
+    private static func styrene(_ size: CGFloat, weight: Font.Weight) -> Font {
+        typed(
+            names: ["Outfit", "Outfit Thin", "Outfit-Thin"],
+            size: size,
+            weight: weight
+        )
+    }
+
+    private static func typed(names: [String], size: CGFloat, weight: Font.Weight) -> Font {
+        let axis: [Int: CGFloat] = [2003265654: cgWeight(weight)]
+        for name in names {
+            guard let base = UIFont(name: name, size: size) else { continue }
+            let descriptor = base.fontDescriptor.addingAttributes([
+                UIFontDescriptor.AttributeName(rawValue: kCTFontVariationAttribute as String): axis
+            ])
+            return Font(UIFont(descriptor: descriptor, size: size))
+        }
+        return .system(size: size, weight: weight)
+    }
+
+    private static func cgWeight(_ weight: Font.Weight) -> CGFloat {
+        switch weight {
+        case .ultraLight, .thin: return 200
+        case .light: return 300
+        case .regular: return 400
+        case .medium: return 500
+        case .semibold: return 600
+        case .bold: return 700
+        case .heavy: return 800
+        case .black: return 900
+        default: return 400
+        }
     }
 }
 
@@ -148,7 +199,7 @@ struct BrandWordmark: View {
     @ViewBuilder
     private func glyphView(_ glyph: Glyph) -> some View {
         let letter = Text(glyph.letter)
-            .font(Neu.serif(size, weight: weight))
+            .font(Neu.logo(size, weight: weight))
             .italic()
 
         switch glyph.role {

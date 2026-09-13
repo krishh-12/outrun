@@ -14,6 +14,7 @@ struct OutrunSplashView: View {
 
     @State private var revealed = Array(repeating: false, count: BrandWordmark.Kind.outrun.glyphCount)
     @State private var underline: CGFloat = 0
+    @State private var taglineOpacity: Double = 0
     @State private var hintOpacity: Double = 0
     @State private var markScale: CGFloat = 0.96
 
@@ -33,9 +34,16 @@ struct OutrunSplashView: View {
                         .frame(width: 88 * underline, height: 1.5)
                 }
 
-                Text("Tap to Begin")
-                    .font(Neu.serif(13))
+                Text("outrun your age")
+                    .font(Neu.serif(18))
                     .italic()
+                    .tracking(0.6)
+                    .foregroundStyle(Neu.ink.opacity(0.72))
+                    .opacity(taglineOpacity)
+                    .padding(.top, 20)
+
+                Text("Tap to Begin")
+                    .font(Neu.label(13))
                     .tracking(1.4)
                     .foregroundStyle(Neu.muted)
                     .opacity(hintOpacity)
@@ -68,6 +76,7 @@ struct OutrunSplashView: View {
         withAnimation(.easeOut(duration: 0.7).delay(0.48)) {
             underline = 1
             markScale = 1
+            taglineOpacity = 1
         }
 
         withAnimation(.easeInOut(duration: 0.8).delay(0.85)) {

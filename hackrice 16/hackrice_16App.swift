@@ -11,10 +11,15 @@ import SwiftUI
 struct hackrice_16App: App {
     @State private var authService = AuthService()
 
+    init() {
+        Neu.registerFonts()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(authService)
+                .environment(\.font, Neu.body())
                 .background(Neu.canvas.ignoresSafeArea())
                 .onOpenURL { url in
                     authService.handleOpenURL(url)

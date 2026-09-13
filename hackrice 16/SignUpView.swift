@@ -45,16 +45,14 @@ struct SignUpView: View {
                     Text(isCreatingAccount
                          ? "Enter your email address to create an account.\nStart outrunning your biological age."
                          : "Enter your email address to sign in.\nStart outrunning your biological age.")
-                        .font(Neu.serif(16))
-                        .italic()
+                        .font(Neu.body(16))
                         .foregroundStyle(AuthPalette.subtitle)
                         .padding(.top, 10)
                         .padding(.bottom, 28)
 
                     if let message = localError ?? auth.errorMessage {
                         Text(message)
-                            .font(Neu.serif(14))
-                            .italic()
+                            .font(Neu.body(14))
                             .foregroundStyle(Color.red.opacity(0.85))
                             .padding(.bottom, 16)
                     }
@@ -81,8 +79,7 @@ struct SignUpView: View {
                             Button("Forgot Password?") {
                                 showForgotPassword = true
                             }
-                            .font(Neu.serif(14))
-                            .italic()
+                            .font(Neu.body(14))
                             .foregroundStyle(AuthPalette.subtitle)
                         }
                         .padding(.top, 10)
@@ -90,8 +87,7 @@ struct SignUpView: View {
 
                     Button(action: submitEmail) {
                         Text(isCreatingAccount ? "Create Account" : "Sign In")
-                            .font(Neu.serif(18))
-                            .italic()
+                            .font(Neu.button(17))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
@@ -112,14 +108,12 @@ struct SignUpView: View {
                         }
                         .foregroundStyle(AuthPalette.green)
                     }
-                    .font(Neu.serif(15))
-                    .italic()
+                    .font(Neu.body(15))
                     .frame(maxWidth: .infinity)
                     .padding(.top, 18)
 
                     Text("Or")
-                        .font(Neu.serif(15))
-                        .italic()
+                        .font(Neu.body(15))
                         .foregroundStyle(AuthPalette.subtitle)
                         .frame(maxWidth: .infinity)
                         .padding(.top, 18)
@@ -170,8 +164,7 @@ struct SignUpView: View {
     private func underlineField(title: String, text: Binding<String>, isSecure: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(Neu.serif(16))
-                .italic()
+                .font(Neu.label(13))
                 .foregroundStyle(AuthPalette.field)
 
             Group {
@@ -204,8 +197,7 @@ struct SignUpView: View {
                     .foregroundStyle(AuthPalette.google)
             }
             Text(title)
-                .font(Neu.serif(16))
-                .italic()
+                .font(Neu.button(16))
         }
     }
 

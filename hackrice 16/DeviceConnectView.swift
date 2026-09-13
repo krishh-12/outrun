@@ -24,8 +24,7 @@ struct DeviceConnectView: View {
                         .foregroundStyle(Neu.ink)
 
                     Text("Connect a wearable, or enter recovery data yourself.")
-                        .font(Neu.serif(16))
-                        .italic()
+                        .font(Neu.body(16))
                         .foregroundStyle(Neu.muted)
                 }
                 .padding(.top, 24)
@@ -44,8 +43,7 @@ struct DeviceConnectView: View {
                     onContinue(selected)
                 } label: {
                     Text("Continue")
-                        .font(Neu.serif(18))
-                        .italic()
+                        .font(Neu.button(17))
                         .foregroundStyle(selected == nil ? Neu.muted : Neu.ink)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)

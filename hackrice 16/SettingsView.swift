@@ -40,12 +40,10 @@ struct SettingsView: View {
 
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Email")
-                                    .font(Neu.serif(13))
-                                    .italic()
+                                    .font(Neu.label(13))
                                     .foregroundStyle(Neu.muted)
                                 Text(auth.currentUser?.email ?? state.profileEmail ?? "Not set")
-                                    .font(Neu.serif(16))
-                                    .italic()
+                                    .font(Neu.body(16))
                                     .foregroundStyle(Neu.ink)
                             }
                         }
@@ -56,8 +54,7 @@ struct SettingsView: View {
                             saveProfile()
                         } label: {
                             Text(saveMessage ?? "Save Profile")
-                                .font(Neu.serif(17))
-                                .italic()
+                                .font(Neu.button(17))
                                 .foregroundStyle(Neu.ink)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
@@ -84,8 +81,7 @@ struct SettingsView: View {
                             showResetConfirm = true
                         } label: {
                             Text("Reset Data")
-                                .font(Neu.serif(17))
-                                .italic()
+                                .font(Neu.button(17))
                                 .foregroundStyle(Neu.older)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
@@ -96,8 +92,7 @@ struct SettingsView: View {
                             showLogOutConfirm = true
                         } label: {
                             Text("Log Out")
-                                .font(Neu.serif(17))
-                                .italic()
+                                .font(Neu.button(17))
                                 .foregroundStyle(Neu.older)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
@@ -188,8 +183,7 @@ struct SettingsView: View {
     private func labeledField(_ title: String, text: Binding<String>, field: Field) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(Neu.serif(13))
-                .italic()
+                .font(Neu.label(13))
                 .foregroundStyle(Neu.muted)
             NeuField(placeholder: title, text: text)
                 .focused($focusedField, equals: field)
@@ -199,8 +193,7 @@ struct SettingsView: View {
     private func toggleRow(_ title: String, isOn: Binding<Bool>) -> some View {
         Toggle(isOn: isOn) {
             Text(title)
-                .font(Neu.serif(16))
-                .italic()
+                .font(Neu.body(16))
                 .foregroundStyle(Neu.ink)
         }
         .tint(Neu.accent)
@@ -210,13 +203,11 @@ struct SettingsView: View {
     private func infoRow(_ title: String, value: String) -> some View {
         HStack {
             Text(title)
-                .font(Neu.serif(16))
-                .italic()
+                .font(Neu.body(16))
                 .foregroundStyle(Neu.ink)
             Spacer()
             Text(value)
-                .font(Neu.serif(15))
-                .italic()
+                .font(Neu.body(15))
                 .foregroundStyle(Neu.muted)
         }
         .padding(.vertical, 10)

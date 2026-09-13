@@ -36,8 +36,7 @@ struct ContextLoggingView: View {
 
                         if let status = state.healthKitStatus ?? healthKit.statusMessage {
                             Text(status)
-                                .font(Neu.serif(13))
-                                .italic()
+                                .font(Neu.body(13))
                                 .foregroundStyle(Neu.muted)
                         }
 
@@ -89,8 +88,7 @@ struct ContextLoggingView: View {
                             .tint(Neu.ink)
                     }
                     Text(isSyncing ? "Syncing…" : "Sync Apple Health Now")
-                        .font(Neu.serif(17))
-                        .italic()
+                        .font(Neu.button(17))
                 }
                 .foregroundStyle(Neu.ink)
                 .frame(maxWidth: .infinity)
@@ -129,7 +127,7 @@ struct ContextLoggingView: View {
 
                         VStack(alignment: .leading, spacing: 4) {
                             Text(scenario.title)
-                                .font(Neu.serif(18))
+                                .font(Neu.heading(18))
                                 .italic()
                                 .foregroundStyle(Neu.ink)
                             Text(scenario.summary)
@@ -155,7 +153,7 @@ struct ContextLoggingView: View {
     private var habitGrid: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Habit context")
-                .font(Neu.serif(16))
+                .font(Neu.heading(16))
                 .italic()
                 .foregroundStyle(Neu.ink)
 
@@ -170,8 +168,7 @@ struct ContextLoggingView: View {
                     } label: {
                         VStack(spacing: 4) {
                             Text(habit.title)
-                                .font(Neu.serif(13))
-                                .italic()
+                                .font(Neu.label(13))
                                 .foregroundStyle(Neu.ink)
                                 .multilineTextAlignment(.center)
                             Text(habit.penaltyReadout)

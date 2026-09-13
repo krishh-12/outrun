@@ -12,7 +12,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		8D76355E3055D45C0029F11F /* hackrice 16.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hackrice 16.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8D76355E3055D45C0029F11F /* outrunn.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = outrunn.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -60,7 +60,7 @@
 		8D76355F3055D45C0029F11F /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				8D76355E3055D45C0029F11F /* hackrice 16.app */,
+				8D76355E3055D45C0029F11F /* outrunn.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -89,7 +89,7 @@
 				8D9A1B213055F0110029F11F /* SmartSpectra */,
 			);
 			productName = "hackrice 16";
-			productReference = 8D76355E3055D45C0029F11F /* hackrice 16.app */;
+			productReference = 8D76355E3055D45C0029F11F /* outrunn.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */

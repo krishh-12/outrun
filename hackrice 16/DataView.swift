@@ -90,7 +90,7 @@ struct DataView: View {
                         } label: {
                             VStack(spacing: 6) {
                                 Text("See How We Got This Information")
-                                    .font(Neu.serif(16))
+                                    .font(Neu.heading(16))
                                     .italic()
                                     .foregroundStyle(Neu.ink)
                                     .multilineTextAlignment(.center)
@@ -163,8 +163,7 @@ struct DataView: View {
                     .foregroundStyle(Neu.ink)
                     .monospacedDigit()
                 Text(kind.title)
-                    .font(Neu.serif(isPrimary ? 13 : 10))
-                    .italic()
+                    .font(Neu.label(isPrimary ? 13 : 10))
                     .foregroundStyle(Neu.muted)
                     .multilineTextAlignment(.center)
                     .minimumScaleFactor(0.7)
@@ -195,7 +194,7 @@ struct DataView: View {
     private var compareSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Vs people your Real Age")
-                .font(Neu.serif(18))
+                .font(Neu.heading(18))
                 .italic()
                 .foregroundStyle(Neu.ink)
 
@@ -238,7 +237,7 @@ struct DataView: View {
             if !stats.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("From your last scan")
-                        .font(Neu.serif(18))
+                        .font(Neu.heading(18))
                         .italic()
                         .foregroundStyle(Neu.ink)
 
@@ -279,7 +278,7 @@ struct DataView: View {
             if !factors.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("What’s adding years")
-                        .font(Neu.serif(18))
+                        .font(Neu.heading(18))
                         .italic()
                         .foregroundStyle(Neu.ink)
 
@@ -321,8 +320,7 @@ struct DataView: View {
             showTelemetry = true
         } label: {
             Text("Log extra context")
-                .font(Neu.serif(16))
-                .italic()
+                .font(Neu.button(16))
                 .foregroundStyle(Neu.ink)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
@@ -333,7 +331,7 @@ struct DataView: View {
     private var methodologySection: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("How We Got This")
-                .font(Neu.serif(20))
+                .font(Neu.heading(20))
                 .italic()
                 .foregroundStyle(Neu.ink)
 
@@ -359,7 +357,7 @@ struct DataView: View {
     private func methodologyCard(title: String, body: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(Neu.serif(16))
+                .font(Neu.heading(16))
                 .italic()
                 .foregroundStyle(Neu.ink)
             Text(body)
