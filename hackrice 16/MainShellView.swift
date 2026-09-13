@@ -21,6 +21,7 @@ struct MainShellView: View {
 
     @State private var tab: ShellTab = .dashboard
     @State private var showSettings = false
+    @State private var insightsOpenCount = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,7 +29,7 @@ struct MainShellView: View {
                 DashboardView(
                     state: state,
                     onOpenSettings: { showSettings = true },
-                    onSeeInsights: { tab = .insights }
+                    onSeeInsights: { openInsights() }
                 )
                     .opacity(tab == .dashboard ? 1 : 0)
                     .allowsHitTesting(tab == .dashboard)
@@ -40,7 +41,8 @@ struct MainShellView: View {
                 PersonalizedInsightsView(
                     state: state,
                     onOpenSettings: { showSettings = true },
-                    isVisible: tab == .insights
+                    isVisible: tab == .insights,
+                    openCount: insightsOpenCount
                 )
                     .opacity(tab == .insights ? 1 : 0)
                     .allowsHitTesting(tab == .insights)
@@ -85,7 +87,11 @@ struct MainShellView: View {
     private func tabButton(_ value: ShellTab, icon: String, title: String) -> some View {
         let selected = tab == value
         return Button {
-            tab = value
+            if value == .insights {
+                openInsights()
+            } else {
+                tab = value
+            }
         } label: {
             Image(systemName: icon)
                 .font(.system(size: 18, weight: .semibold))
@@ -96,6 +102,11 @@ struct MainShellView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
+    }
+
+    private func openInsights() {
+        insightsOpenCount += 1
+        tab = .insights
     }
 }
 
@@ -239,6 +250,7 @@ struct PersonalizedInsightsView: View {
     var state: UserRecoveryState
     var onOpenSettings: () -> Void = {}
     var isVisible: Bool = true
+    var openCount: Int = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -248,101 +260,157 @@ struct PersonalizedInsightsView: View {
             .padding(.horizontal, ShellLayout.horizontalPadding)
             .padding(.top, ShellLayout.topPadding)
 
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 20) {
-                    if state.isRefreshingCoach {
-                        HStack(spacing: 12) {
-                            ProgressView()
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Reading your scan against Health data")
-                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(Neu.ink)
-                                Text(state.coachStatus ?? "Comparing recovery to your age group…")
-                                    .font(.system(size: 14, weight: .regular, design: .rounded))
-                                    .foregroundStyle(Neu.muted)
-                            }
-                        }
-                        .padding(18)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(ConvexShape(shape: RoundedRectangle(cornerRadius: 22, style: .continuous)))
-                    } else if let plan = state.latestCoachPlan {
-                        hero(plan)
-                        agesRow(plan)
-                        readableBlock(
-                            kicker: "Scan vs wearables",
-                            title: "What the camera saw, vs Apple Health / Garmin",
-                            body: plan.scanVsLifestyle,
-                            tint: Neu.accent
-                        )
-                        if !plan.studyNotes.isEmpty {
-                            readableBlock(
-                                kicker: "Studies & your age group",
-                                title: plan.ageGroup.isEmpty ? "Recovery baseline" : "Age group \(plan.ageGroup)",
-                                body: [plan.recoveryWindow, plan.studyNotes].filter { !$0.isEmpty }.joined(separator: "\n\n"),
-                                tint: Color(red: 0.55, green: 0.45, blue: 0.28)
-                            )
-                        }
-                        if !plan.drivers.isEmpty {
-                            Text("What’s moving the number")
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Neu.muted)
-                                .textCase(.uppercase)
-                                .tracking(0.6)
-                            ForEach(Array(plan.drivers.enumerated()), id: \.offset) { _, driver in
-                                driverRow(driver)
-                            }
-                        }
-                        planSection(title: "Do this today", symbol: "sun.max.fill", tint: Color.orange, items: plan.today)
-                        planSection(title: "This week", symbol: "calendar", tint: Neu.accent, items: plan.thisWeek)
-                        planSection(title: "Training", symbol: "figure.run", tint: Color(red: 0.86, green: 0.38, blue: 0.40), items: plan.training)
-                        planSection(title: "Recovery", symbol: "moon.zzz.fill", tint: Color(red: 0.35, green: 0.55, blue: 0.86), items: plan.recovery)
-                        planSection(title: "Long-term improvement", symbol: "chart.line.uptrend.xyaxis", tint: Neu.younger, items: plan.longTerm)
-                        planSection(title: "Recommended supplements", symbol: "pills.fill", tint: Color(red: 0.55, green: 0.45, blue: 0.28), items: plan.supplements)
-                        if let caution = plan.caution, !caution.isEmpty {
-                            readableBlock(kicker: "Keep in mind", title: "Not a diagnosis", body: caution, tint: Neu.older)
-                        }
-                    } else {
-                        readableBlock(
-                            kicker: "Ages",
-                            title: "Biological \(String(format: "%.1f", state.biologicalAge))",
-                            body: state.hasCompletedBaseline
-                                ? (
-                                    state.biologicalAge < state.chronologicalAge
-                                        ? "That’s \(String(format: "%.1f", state.chronologicalAge - state.biologicalAge)) years younger than your real age."
-                                        : "A little older than your calendar age right now. Refresh the plan so Gemini can split camera physiology from sleep and steps."
-                                )
-                                : "Complete a scan to unlock a personalized recovery plan.",
-                            tint: Neu.accent
-                        )
-                        if let status = state.coachStatus {
-                            readableBlock(kicker: "Gemini", title: "Couldn’t finish the plan", body: status, tint: Neu.older)
-                        }
-                    }
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 20) {
+                        Color.clear
+                            .frame(height: 1)
+                            .id("insightsTop")
 
-                    if state.hasCompletedBaseline {
-                        Button {
-                            Task { await GeminiCoach.refreshPlan(for: state) }
-                        } label: {
-                            Text(state.isRefreshingCoach ? "Generating…" : "Refresh Gemini plan")
-                                .font(.system(size: 17, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Neu.ink)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
+                        refreshCard
+
+                        if state.isRefreshingCoach {
+                            HStack(spacing: 12) {
+                                ProgressView()
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Writing a new plan")
+                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(Neu.ink)
+                                    Text(state.coachStatus ?? "Gemini is reading your latest scan…")
+                                        .font(.system(size: 14, weight: .regular, design: .rounded))
+                                        .foregroundStyle(Neu.muted)
+                                }
+                            }
+                            .padding(18)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(ConvexShape(shape: RoundedRectangle(cornerRadius: 22, style: .continuous)))
                         }
-                        .buttonStyle(NeuButtonStyle())
-                        .disabled(state.isRefreshingCoach)
+
+                        if let plan = state.latestCoachPlan {
+                            hero(plan)
+                            agesRow(plan)
+                            readableBlock(
+                                kicker: "Scan vs wearables",
+                                title: "What the camera saw, vs Apple Health / Garmin",
+                                body: plan.scanVsLifestyle,
+                                tint: Neu.accent
+                            )
+                            if !plan.studyNotes.isEmpty {
+                                readableBlock(
+                                    kicker: "Studies & your age group",
+                                    title: plan.ageGroup.isEmpty ? "Recovery baseline" : "Age group \(plan.ageGroup)",
+                                    body: [plan.recoveryWindow, plan.studyNotes].filter { !$0.isEmpty }.joined(separator: "\n\n"),
+                                    tint: Color(red: 0.55, green: 0.45, blue: 0.28)
+                                )
+                            }
+                            if !plan.drivers.isEmpty {
+                                Text("What’s moving the number")
+                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(Neu.muted)
+                                    .textCase(.uppercase)
+                                    .tracking(0.6)
+                                ForEach(Array(plan.drivers.enumerated()), id: \.offset) { _, driver in
+                                    driverRow(driver)
+                                }
+                            }
+                            planSection(title: "Do this today", symbol: "sun.max.fill", tint: Color.orange, items: plan.today)
+                            planSection(title: "This week", symbol: "calendar", tint: Neu.accent, items: plan.thisWeek)
+                            planSection(title: "Training", symbol: "figure.run", tint: Color(red: 0.86, green: 0.38, blue: 0.40), items: plan.training)
+                            planSection(title: "Recovery", symbol: "moon.zzz.fill", tint: Color(red: 0.35, green: 0.55, blue: 0.86), items: plan.recovery)
+                            planSection(title: "Long-term improvement", symbol: "chart.line.uptrend.xyaxis", tint: Neu.younger, items: plan.longTerm)
+                            planSection(title: "Recommended supplements", symbol: "pills.fill", tint: Color(red: 0.55, green: 0.45, blue: 0.28), items: plan.supplements)
+                            if let caution = plan.caution, !caution.isEmpty {
+                                readableBlock(kicker: "Keep in mind", title: "Not a diagnosis", body: caution, tint: Neu.older)
+                            }
+                        } else if !state.isRefreshingCoach {
+                            readableBlock(
+                                kicker: "Plan",
+                                title: state.hasCompletedBaseline ? "No Gemini plan yet" : "Scan first",
+                                body: state.hasCompletedBaseline
+                                    ? "Tap Repopulate Insights to generate a plan from your latest scan. Opening this page will not spend tokens on its own."
+                                    : "Complete a scan to unlock a personalized recovery plan.",
+                                tint: Neu.accent
+                            )
+                            if let status = state.coachStatus {
+                                readableBlock(kicker: "Gemini", title: "Couldn’t finish the plan", body: status, tint: Neu.older)
+                            }
+                        }
                     }
+                    .padding(.horizontal, ShellLayout.horizontalPadding)
+                    .padding(.top, 8)
+                    .padding(.bottom, 12)
                 }
-                .padding(.horizontal, ShellLayout.horizontalPadding)
-                .padding(.top, 8)
-                .padding(.bottom, 12)
+                .onChange(of: isVisible) { _, visible in
+                    guard visible else { return }
+                    scrollToTop(proxy)
+                }
+                .onChange(of: openCount) { _, _ in
+                    guard isVisible else { return }
+                    scrollToTop(proxy)
+                }
             }
         }
-        .task(id: isVisible) {
-            guard isVisible else { return }
-            if state.hasCompletedBaseline, state.latestCoachPlan == nil, !state.isRefreshingCoach {
-                await GeminiCoach.refreshPlan(for: state)
+    }
+
+    private var refreshCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Last updated")
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(Neu.accent)
+                .textCase(.uppercase)
+                .tracking(0.8)
+            Text(lastUpdatedText)
+                .font(Neu.serif(22, weight: .regular))
+                .foregroundStyle(Neu.ink)
+            Text(accuracyNote)
+                .font(.system(size: 15, design: .rounded))
+                .foregroundStyle(Neu.ink.opacity(0.8))
+                .fixedSize(horizontal: false, vertical: true)
+
+            if state.hasCompletedBaseline {
+                Button {
+                    Task { await GeminiCoach.refreshPlan(for: state) }
+                } label: {
+                    Text(state.isRefreshingCoach ? "Generating…" : "Repopulate Insights")
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Neu.ink)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .buttonStyle(NeuButtonStyle())
+                .disabled(state.isRefreshingCoach)
             }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(ConvexShape(shape: RoundedRectangle(cornerRadius: 22, style: .continuous)))
+    }
+
+    private var lastUpdatedText: String {
+        guard let plan = state.latestCoachPlan else {
+            return "Not generated yet"
+        }
+        return plan.generatedAt.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    private var accuracyNote: String {
+        if !state.hasCompletedBaseline {
+            return "Insights stay empty until you complete a scan."
+        }
+        if state.latestCoachPlan == nil {
+            return "Repopulate Insights to generate a plan. This page will not call Gemini until you do."
+        }
+        if let scan = state.latestScan,
+           let plan = state.latestCoachPlan,
+           scan.capturedAt > plan.generatedAt.addingTimeInterval(2) {
+            return "A newer scan is in. Repopulate Insights so this plan matches it."
+        }
+        return "Repopulate Insights after a scan or Health changes. Opening this page will not refresh the plan on its own."
+    }
+
+    private func scrollToTop(_ proxy: ScrollViewProxy) {
+        DispatchQueue.main.async {
+            proxy.scrollTo("insightsTop", anchor: .top)
         }
     }
 
