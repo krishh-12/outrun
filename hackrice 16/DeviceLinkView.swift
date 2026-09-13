@@ -40,11 +40,11 @@ struct DeviceLinkView: View {
                                 .background(ConvexShape(shape: Circle(), isPressed: connected))
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(integration.title)
-                                    .font(Neu.serif(24))
+                                    .font(Neu.display(24))
                                     .italic()
                                     .foregroundStyle(Neu.ink)
                                 Text(connected ? "Connected" : "Not Connected")
-                                    .font(Neu.serif(14, weight: .light))
+                                    .font(Neu.serif(14))
                                     .italic()
                                     .foregroundStyle(connected ? Neu.accent : Neu.muted)
                             }
@@ -52,7 +52,7 @@ struct DeviceLinkView: View {
 
                         if let status {
                             Text(status)
-                                .font(Neu.serif(14, weight: .light))
+                                .font(Neu.serif(14))
                                 .italic()
                                 .foregroundStyle(Neu.ink)
                         }
@@ -69,7 +69,7 @@ struct DeviceLinkView: View {
                             Task { await connectDevice() }
                         } label: {
                             Text(isWorking ? "Connecting…" : (connected ? "Refresh Data" : integration.actionTitle))
-                                .font(Neu.serif(17, weight: .light))
+                                .font(Neu.serif(17))
                                 .italic()
                                 .foregroundStyle(Neu.ink)
                                 .frame(maxWidth: .infinity)
@@ -83,7 +83,7 @@ struct DeviceLinkView: View {
                                 openAppleHealth()
                             } label: {
                                 Text("Open Apple Health")
-                                    .font(Neu.serif(16, weight: .light))
+                                    .font(Neu.serif(16))
                                     .italic()
                                     .foregroundStyle(Neu.ink)
                                     .frame(maxWidth: .infinity)
@@ -98,7 +98,7 @@ struct DeviceLinkView: View {
                                 status = "Disconnected."
                             } label: {
                                 Text("Disconnect")
-                                    .font(Neu.serif(16, weight: .light))
+                                    .font(Neu.serif(16))
                                     .italic()
                                     .foregroundStyle(Neu.older)
                                     .frame(maxWidth: .infinity)
@@ -135,7 +135,7 @@ struct DeviceLinkView: View {
                 contextRow("Resting HR", value: "\(health.restingHeartRate) bpm")
             } else {
                 Text("No Health samples loaded yet. Tap Link Health, then allow Sleep, Steps, Heart Rate, and HRV.")
-                    .font(Neu.serif(13, weight: .light))
+                    .font(Neu.serif(13))
                     .italic()
                     .foregroundStyle(Neu.muted)
             }
@@ -147,12 +147,12 @@ struct DeviceLinkView: View {
     private func contextRow(_ title: String, value: String) -> some View {
         HStack {
             Text(title)
-                .font(Neu.serif(15, weight: .light))
+                .font(Neu.serif(15))
                 .italic()
                 .foregroundStyle(Neu.ink)
             Spacer()
             Text(value)
-                .font(Neu.serif(15, weight: .light))
+                .font(Neu.serif(15))
                 .italic()
                 .foregroundStyle(Neu.accent)
         }
@@ -161,13 +161,13 @@ struct DeviceLinkView: View {
     private func metricStepper(_ title: String, value: Binding<Int>, range: ClosedRange<Int>) -> some View {
         HStack {
             Text(title)
-                .font(Neu.serif(16, weight: .light))
+                .font(Neu.serif(16))
                 .italic()
                 .foregroundStyle(Neu.ink)
             Spacer()
             Stepper(value: value, in: range) {
                 Text("\(value.wrappedValue)")
-                    .font(Neu.serif(16, weight: .light))
+                    .font(Neu.serif(16))
                     .italic()
                     .foregroundStyle(Neu.accent)
                     .frame(minWidth: 36, alignment: .trailing)

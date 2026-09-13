@@ -19,12 +19,12 @@ struct DeviceConnectView: View {
             VStack(alignment: .leading, spacing: 24) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Your Data")
-                        .font(Neu.serif(28))
+                        .font(Neu.display(28))
                         .italic()
                         .foregroundStyle(Neu.ink)
 
                     Text("Connect a wearable, or enter recovery data yourself.")
-                        .font(Neu.serif(16, weight: .light))
+                        .font(Neu.serif(16))
                         .italic()
                         .foregroundStyle(Neu.muted)
                 }
@@ -44,7 +44,7 @@ struct DeviceConnectView: View {
                     onContinue(selected)
                 } label: {
                     Text("Continue")
-                        .font(Neu.serif(18, weight: .light))
+                        .font(Neu.serif(18))
                         .italic()
                         .foregroundStyle(selected == nil ? Neu.muted : Neu.ink)
                         .frame(maxWidth: .infinity)
@@ -75,7 +75,7 @@ struct DeviceConnectView: View {
                     .frame(width: 28)
 
                 Text(source.title)
-                    .font(Neu.serif(16, weight: .regular))
+                    .font(Neu.heading(16))
                     .foregroundStyle(Neu.ink)
 
                 Spacer()

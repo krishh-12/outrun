@@ -38,6 +38,7 @@ struct DashboardView: View {
     var state: UserRecoveryState
     var onOpenSettings: () -> Void = {}
     var onSeeInsights: () -> Void = {}
+    var scanRequestCount: Int = 0
 
     @State private var showActivityPrompt = false
     @State private var showPreSageScan = false
@@ -45,7 +46,7 @@ struct DashboardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: ShellLayout.pageSpacing) {
-            ShellHeader(title: "outrun") {
+            ShellHeader(title: "outrunn") {
                 SettingsGearButton(action: onOpenSettings)
             }
 
@@ -75,6 +76,10 @@ struct DashboardView: View {
                 showPreSageScan = false
             }
         }
+        .onChange(of: scanRequestCount) { _, count in
+            guard count > 0 else { return }
+            showActivityPrompt = true
+        }
     }
 
     private var baselineCard: some View {
@@ -90,7 +95,8 @@ struct DashboardView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(state.hasCompletedBaseline ? "Take a New Scan" : "Take Your Baseline Scan")
-                        .font(Neu.serif(18, weight: .regular))
+                        .font(Neu.heading(18))
+                        .italic()
                         .foregroundStyle(Neu.ink)
                 }
 
@@ -111,7 +117,8 @@ struct DashboardView: View {
     private var ageChart: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Age Trends")
-                .font(Neu.serif(16, weight: .regular))
+                .font(Neu.heading(16))
+                .italic()
                 .foregroundStyle(Neu.ink)
 
             Picker("Range", selection: chartRangeBinding) {
@@ -125,7 +132,7 @@ struct DashboardView: View {
                 VStack(spacing: 8) {
                     Spacer()
                     Text("Complete your baseline scan to unlock your age graph.")
-                        .font(Neu.serif(15, weight: .light))
+                        .font(Neu.serif(15))
                         .italic()
                         .foregroundStyle(Neu.muted)
                         .multilineTextAlignment(.center)
@@ -137,10 +144,10 @@ struct DashboardView: View {
                 VStack(spacing: 8) {
                     Spacer()
                     Text("Not enough data")
-                        .font(Neu.serif(18, weight: .regular))
+                        .font(Neu.heading(18))
                         .foregroundStyle(Neu.ink)
                     Text("Keep scanning for a week to unlock this time range.")
-                        .font(Neu.serif(15, weight: .light))
+                        .font(Neu.serif(15))
                         .italic()
                         .foregroundStyle(Neu.muted)
                         .multilineTextAlignment(.center)
@@ -152,7 +159,7 @@ struct DashboardView: View {
                 VStack(spacing: 8) {
                     Spacer()
                     Text("No readings in this time range yet.")
-                        .font(Neu.serif(15, weight: .light))
+                        .font(Neu.serif(15))
                         .italic()
                         .foregroundStyle(Neu.muted)
                         .multilineTextAlignment(.center)
@@ -182,7 +189,7 @@ struct DashboardView: View {
                         .fill(metric.color)
                         .frame(width: 8, height: 8)
                     Text(metric.rawValue)
-                        .font(.caption)
+                        .font(Neu.body(12))
                         .foregroundStyle(Neu.ink)
                 }
             }
@@ -194,7 +201,7 @@ struct DashboardView: View {
             onSeeInsights()
         } label: {
             Text("See Personalized Insights")
-                .font(Neu.serif(17, weight: .regular))
+                .font(Neu.heading(17))
                 .foregroundStyle(Neu.ink)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
@@ -321,7 +328,7 @@ private struct AgeTrendChart: View {
                 AxisValueLabel {
                     if let date = value.as(Date.self) {
                         Text(date, format: xAxisFormat)
-                            .font(.caption2)
+                            .font(Neu.body(11))
                             .foregroundStyle(Neu.muted)
                     }
                 }
@@ -340,7 +347,7 @@ private struct AgeTrendChart: View {
             AxisValueLabel {
                 if let age = value.as(Double.self) {
                     Text(String(format: "%.0f", age))
-                        .font(.caption2.monospacedDigit())
+                        .font(Neu.body(11).monospacedDigit())
                         .foregroundStyle(Neu.muted)
                 }
             }

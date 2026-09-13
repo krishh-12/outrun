@@ -519,6 +519,12 @@ final class UserRecoveryState {
     var latestCoachPlan: CoachPlan?
     var coachStatus: String?
     var isRefreshingCoach: Bool
+    var roadrunnerMessages: [RoadrunnerMessage]
+    var roadrunnerStatus: String?
+    var isAskingRoadrunner: Bool
+    var roadrunnerGeneration: Int
+    var roadrunnerAskCount: Int
+    var roadrunnerAskDay: Date
 
     init(
         userName: String,
@@ -590,6 +596,12 @@ final class UserRecoveryState {
         self.latestCoachPlan = latestCoachPlan
         self.coachStatus = nil
         self.isRefreshingCoach = false
+        self.roadrunnerMessages = []
+        self.roadrunnerStatus = nil
+        self.isAskingRoadrunner = false
+        self.roadrunnerGeneration = 0
+        self.roadrunnerAskCount = 0
+        self.roadrunnerAskDay = Calendar.current.startOfDay(for: .now)
     }
 
     var ageDelta: Double {
@@ -607,6 +619,23 @@ final class UserRecoveryState {
 
     var pulmonaryAgeDelta: Double {
         pulmonaryAge - chronologicalAge
+    }
+
+    static let roadrunnerDailyLimit = 8
+
+    var roadrunnerAsksRemaining: Int {
+        let used = Calendar.current.isDate(roadrunnerAskDay, inSameDayAs: .now) ? roadrunnerAskCount : 0
+        return max(0, Self.roadrunnerDailyLimit - used)
+    }
+
+    func consumeRoadrunnerAsk() {
+        let today = Calendar.current.startOfDay(for: .now)
+        if !Calendar.current.isDate(roadrunnerAskDay, inSameDayAs: today) {
+            roadrunnerAskDay = today
+            roadrunnerAskCount = 0
+        }
+        roadrunnerAskCount += 1
+        persistSoon()
     }
 
     var lifestylePenalties: Double {
@@ -644,6 +673,9 @@ final class UserRecoveryState {
         healthContext = nil
         latestCoachPlan = nil
         coachStatus = nil
+        roadrunnerMessages = []
+        roadrunnerStatus = nil
+        roadrunnerGeneration += 1
         persistSoon()
     }
 
@@ -746,6 +778,9 @@ final class UserRecoveryState {
 
         latestCoachPlan = nil
         coachStatus = nil
+        roadrunnerMessages = []
+        roadrunnerStatus = nil
+        roadrunnerGeneration += 1
 
         if scanHistory.isEmpty {
             hasCompletedBaseline = false
@@ -1101,6 +1136,12 @@ final class UserRecoveryState {
         profileEmail = snapshot.profileEmail
         healthContext = snapshot.healthContext
         latestCoachPlan = snapshot.latestCoachPlan
+        roadrunnerMessages = []
+        roadrunnerStatus = nil
+        isAskingRoadrunner = false
+        roadrunnerGeneration += 1
+        roadrunnerAskCount = snapshot.roadrunnerAskCount ?? 0
+        roadrunnerAskDay = snapshot.roadrunnerAskDay ?? Calendar.current.startOfDay(for: .now)
     }
 
     func snapshot() -> RecoverySnapshot {
@@ -1136,7 +1177,10 @@ final class UserRecoveryState {
             chartRange: chartRange,
             profileEmail: profileEmail,
             healthContext: healthContext,
-            latestCoachPlan: latestCoachPlan
+            latestCoachPlan: latestCoachPlan,
+            roadrunnerMessages: nil,
+            roadrunnerAskCount: roadrunnerAskCount,
+            roadrunnerAskDay: roadrunnerAskDay
         )
     }
 

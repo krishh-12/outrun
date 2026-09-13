@@ -22,6 +22,7 @@ struct MainShellView: View {
     @State private var tab: ShellTab = .dashboard
     @State private var showSettings = false
     @State private var insightsOpenCount = 0
+    @State private var scanRequestCount = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -29,7 +30,8 @@ struct MainShellView: View {
                 DashboardView(
                     state: state,
                     onOpenSettings: { showSettings = true },
-                    onSeeInsights: { openInsights() }
+                    onSeeInsights: { openInsights() },
+                    scanRequestCount: scanRequestCount
                 )
                     .opacity(tab == .dashboard ? 1 : 0)
                     .allowsHitTesting(tab == .dashboard)
@@ -41,6 +43,7 @@ struct MainShellView: View {
                 PersonalizedInsightsView(
                     state: state,
                     onOpenSettings: { showSettings = true },
+                    onOpenRoute: openRoute,
                     isVisible: tab == .insights,
                     openCount: insightsOpenCount
                 )
@@ -58,7 +61,7 @@ struct MainShellView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             tabBar
-                .padding(.horizontal, 18)
+                .padding(.horizontal, 14)
                 .padding(.top, 6)
                 .padding(.bottom, 8)
         }
@@ -77,8 +80,9 @@ struct MainShellView: View {
             tabButton(.history, icon: "clock", title: "History")
             tabButton(.add, icon: "plus", title: "Add")
         }
-        .padding(.horizontal, 8)
-        .frame(height: ShellLayout.tabBarHeight)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 6)
+        .frame(height: 72)
         .background(
             ConvexShape(shape: Capsule())
         )
@@ -86,6 +90,7 @@ struct MainShellView: View {
 
     private func tabButton(_ value: ShellTab, icon: String, title: String) -> some View {
         let selected = tab == value
+        let isInsights = value == .insights
         return Button {
             if value == .insights {
                 openInsights()
@@ -93,20 +98,53 @@ struct MainShellView: View {
                 tab = value
             }
         } label: {
-            Image(systemName: icon)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(selected ? Neu.accent : Neu.muted)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .contentShape(Rectangle())
+            VStack(spacing: 3) {
+                ZStack {
+                    if isInsights {
+                        Circle()
+                            .fill(selected ? Neu.accent.opacity(0.32) : Neu.accent.opacity(0.18))
+                            .frame(width: 38, height: 38)
+                    }
+                    Image(systemName: icon)
+                        .font(.system(size: isInsights ? 17 : 18, weight: .semibold))
+                        .foregroundStyle(isInsights || selected ? Neu.accent : Neu.muted)
+                        .symbolEffect(.pulse, options: .repeating.speed(0.35), isActive: isInsights && !selected)
+                }
+                Text(isInsights ? "AI" : title)
+                    .font(Neu.tab(prominent: isInsights))
+                    .foregroundStyle(isInsights || selected ? Neu.accent : Neu.muted.opacity(0.7))
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 60)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(title)
+        .accessibilityLabel(isInsights ? "Insights AI" : title)
     }
 
     private func openInsights() {
         insightsOpenCount += 1
         tab = .insights
+    }
+
+    private func openRoute(_ route: RoadrunnerRoute) {
+        switch route {
+        case .dash:
+            tab = .dashboard
+        case .data:
+            tab = .data
+        case .insights:
+            openInsights()
+        case .history:
+            tab = .history
+        case .add:
+            tab = .add
+        case .settings:
+            showSettings = true
+        case .scan:
+            tab = .dashboard
+            scanRequestCount += 1
+        }
     }
 }
 
@@ -151,13 +189,14 @@ struct AddSourcesView: View {
                         .frame(width: 28)
 
                     Text(integration.title)
-                        .font(Neu.serif(16, weight: .regular))
+                        .font(Neu.heading(16))
+                        .italic()
                         .foregroundStyle(Neu.ink)
 
                     Spacer()
 
                     Text(connected ? "Manage" : integration.actionTitle)
-                        .font(Neu.serif(13, weight: .regular))
+                        .font(Neu.body(13))
                         .foregroundStyle(connected ? Neu.accent : Neu.muted)
                 }
             .padding(16)
@@ -185,11 +224,11 @@ struct AerobicRecencySheet: View {
 
                 VStack(alignment: .leading, spacing: 24) {
                     Text("Time After Workout")
-                        .font(Neu.serif(26, weight: .regular))
+                        .font(Neu.heading(26))
                         .foregroundStyle(Neu.ink)
 
                     Text(label(for: Int(selectedMinutes.rounded())))
-                        .font(.system(size: 28, weight: .semibold, design: .rounded))
+                        .font(Neu.number(28))
                         .foregroundStyle(Neu.accent)
                         .frame(maxWidth: .infinity, alignment: .center)
 
@@ -198,16 +237,16 @@ struct AerobicRecencySheet: View {
 
                     HStack {
                         Text("Just now")
-                            .font(.system(size: 13, design: .rounded))
+                            .font(Neu.body(13))
                             .foregroundStyle(Neu.muted)
                         Spacer()
                         Text("4 hours")
-                            .font(.system(size: 13, design: .rounded))
+                            .font(Neu.body(13))
                             .foregroundStyle(Neu.muted)
                     }
 
                     Text("Gemini uses this to tell incomplete recovery apart from true biological age.")
-                        .font(.system(size: 15, design: .rounded))
+                        .font(Neu.body())
                         .foregroundStyle(Neu.muted)
 
                     Spacer()
@@ -216,7 +255,7 @@ struct AerobicRecencySheet: View {
                         onContinue(Int(selectedMinutes.rounded()))
                     } label: {
                         Text("Continue to Scan")
-                            .font(Neu.serif(18, weight: .regular))
+                            .font(Neu.heading(18))
                             .foregroundStyle(Neu.ink)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
@@ -249,8 +288,13 @@ struct AerobicRecencySheet: View {
 struct PersonalizedInsightsView: View {
     var state: UserRecoveryState
     var onOpenSettings: () -> Void = {}
+    var onOpenRoute: (RoadrunnerRoute) -> Void = { _ in }
     var isVisible: Bool = true
     var openCount: Int = 0
+
+    @State private var roadrunnerDraft = ""
+    @FocusState private var roadrunnerFocused: Bool
+    @State private var planJumpCount = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -268,16 +312,17 @@ struct PersonalizedInsightsView: View {
                             .id("insightsTop")
 
                         refreshCard
+                        roadrunnerCard
 
                         if state.isRefreshingCoach {
                             HStack(spacing: 12) {
                                 ProgressView()
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Writing a new plan")
-                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                        .font(Neu.button(16))
                                         .foregroundStyle(Neu.ink)
                                     Text(state.coachStatus ?? "Gemini is reading your latest scan…")
-                                        .font(.system(size: 14, weight: .regular, design: .rounded))
+                                        .font(Neu.body(14))
                                         .foregroundStyle(Neu.muted)
                                 }
                             }
@@ -288,6 +333,7 @@ struct PersonalizedInsightsView: View {
 
                         if let plan = state.latestCoachPlan {
                             hero(plan)
+                                .id("insightsPlan")
                             agesRow(plan)
                             readableBlock(
                                 kicker: "Scan vs wearables",
@@ -305,7 +351,7 @@ struct PersonalizedInsightsView: View {
                             }
                             if !plan.drivers.isEmpty {
                                 Text("What’s moving the number")
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .font(Neu.label(13))
                                     .foregroundStyle(Neu.muted)
                                     .textCase(.uppercase)
                                     .tracking(0.6)
@@ -331,6 +377,7 @@ struct PersonalizedInsightsView: View {
                                     : "Complete a scan to unlock a personalized recovery plan.",
                                 tint: Neu.accent
                             )
+                            .id("insightsPlan")
                             if let status = state.coachStatus {
                                 readableBlock(kicker: "Gemini", title: "Couldn’t finish the plan", body: status, tint: Neu.older)
                             }
@@ -340,13 +387,22 @@ struct PersonalizedInsightsView: View {
                     .padding(.top, 8)
                     .padding(.bottom, 12)
                 }
+                .scrollDismissesKeyboard(.interactively)
                 .onChange(of: isVisible) { _, visible in
-                    guard visible else { return }
-                    scrollToTop(proxy)
+                    if visible {
+                        scrollToTop(proxy)
+                    } else {
+                        resetRoadrunnerSession()
+                    }
                 }
                 .onChange(of: openCount) { _, _ in
                     guard isVisible else { return }
                     scrollToTop(proxy)
+                }
+                .onChange(of: planJumpCount) { _, _ in
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        proxy.scrollTo("insightsPlan", anchor: .top)
+                    }
                 }
             }
         }
@@ -355,15 +411,16 @@ struct PersonalizedInsightsView: View {
     private var refreshCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Last updated")
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .font(Neu.label(12))
                 .foregroundStyle(Neu.accent)
                 .textCase(.uppercase)
                 .tracking(0.8)
             Text(lastUpdatedText)
-                .font(Neu.serif(22, weight: .regular))
+                .font(Neu.heading(22))
+                .italic()
                 .foregroundStyle(Neu.ink)
             Text(accuracyNote)
-                .font(.system(size: 15, design: .rounded))
+                .font(Neu.body())
                 .foregroundStyle(Neu.ink.opacity(0.8))
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -372,7 +429,7 @@ struct PersonalizedInsightsView: View {
                     Task { await GeminiCoach.refreshPlan(for: state) }
                 } label: {
                     Text(state.isRefreshingCoach ? "Generating…" : "Repopulate Insights")
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .font(Neu.button(17))
                         .foregroundStyle(Neu.ink)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
@@ -384,6 +441,172 @@ struct PersonalizedInsightsView: View {
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(ConvexShape(shape: RoundedRectangle(cornerRadius: 22, style: .continuous)))
+    }
+
+    private var roadrunnerCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 8) {
+                RoadrunnerMark(size: 30)
+                Text("ask")
+                    .font(Neu.display(20))
+                    .italic()
+                    .foregroundStyle(Neu.ink)
+                BrandWordmark(kind: .roadrunner, size: 20)
+            }
+            Text("Ask where something lives, or why a number moved. Finding a screen is free. Gemini answers are limited to \(UserRecoveryState.roadrunnerDailyLimit) a day.")
+                .font(Neu.body(14))
+                .foregroundStyle(Neu.muted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if state.roadrunnerMessages.isEmpty {
+                Text("Try “Where are my ages?” or “What should I do tonight?”")
+                    .font(Neu.body(13))
+                    .foregroundStyle(Neu.muted.opacity(0.9))
+            } else {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(Array(state.roadrunnerMessages.suffix(8))) { message in
+                        roadrunnerBubble(message)
+                    }
+                }
+            }
+
+            if state.isAskingRoadrunner {
+                HStack(spacing: 8) {
+                    ProgressView()
+                    Text("roadrunner is checking your scan…")
+                        .font(Neu.body(13))
+                        .foregroundStyle(Neu.muted)
+                }
+            }
+
+            if let status = state.roadrunnerStatus, !state.isAskingRoadrunner {
+                Text(status)
+                    .font(Neu.body(13))
+                    .foregroundStyle(Neu.older)
+            } else if state.hasCompletedBaseline {
+                Text(quotaCopy)
+                    .font(Neu.body(12))
+                    .foregroundStyle(Neu.muted.opacity(0.9))
+            }
+
+            HStack(spacing: 10) {
+                TextField("ask roadruner", text: $roadrunnerDraft, axis: .vertical)
+                    .font(Neu.body(16))
+                    .foregroundStyle(Neu.ink)
+                    .lineLimit(1...3)
+                    .focused($roadrunnerFocused)
+                    .submitLabel(.send)
+                    .onSubmit { sendRoadrunner() }
+                    .disabled(state.isAskingRoadrunner)
+
+                Button {
+                    sendRoadrunner()
+                } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(Neu.number(28))
+                        .foregroundStyle(canSendRoadrunner ? Neu.accent : Neu.muted.opacity(0.45))
+                }
+                .buttonStyle(.plain)
+                .disabled(!canSendRoadrunner)
+                .accessibilityLabel("Send")
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                ConvexShape(
+                    shape: RoundedRectangle(cornerRadius: 18, style: .continuous),
+                    isPressed: true
+                )
+            )
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(ConvexShape(shape: RoundedRectangle(cornerRadius: 22, style: .continuous)))
+    }
+
+    private var quotaCopy: String {
+        let left = state.roadrunnerAsksRemaining
+        if left == 0 {
+            return "Gemini questions are used up for today. You can still ask where something is."
+        }
+        if left == 1 {
+            return "1 Gemini question left today"
+        }
+        return "\(left) Gemini questions left today"
+    }
+
+    private func resetRoadrunnerSession() {
+        roadrunnerDraft = ""
+        roadrunnerFocused = false
+        planJumpCount = 0
+        state.roadrunnerGeneration += 1
+        state.roadrunnerMessages = []
+        state.roadrunnerStatus = nil
+        state.isAskingRoadrunner = false
+    }
+
+    private var canSendRoadrunner: Bool {
+        !state.isAskingRoadrunner
+            && !roadrunnerDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func sendRoadrunner() {
+        let question = roadrunnerDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard canSendRoadrunner else { return }
+        roadrunnerDraft = ""
+        roadrunnerFocused = false
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+        Task { await GeminiCoach.askRoadrunner(question, for: state) }
+    }
+
+    @ViewBuilder
+    private func roadrunnerBubble(_ message: RoadrunnerMessage) -> some View {
+        HStack {
+            if message.isUser { Spacer(minLength: 28) }
+            VStack(alignment: message.isUser ? .trailing : .leading, spacing: 8) {
+                roadrunnerText(message)
+                    .font(Neu.body())
+                    .foregroundStyle(Neu.ink)
+                    .multilineTextAlignment(message.isUser ? .trailing : .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(12)
+                    .frame(maxWidth: 280, alignment: message.isUser ? .trailing : .leading)
+                    .background(
+                        ConvexShape(
+                            shape: RoundedRectangle(cornerRadius: 16, style: .continuous),
+                            isPressed: message.isUser
+                        )
+                    )
+                if let route = message.route, !message.isUser {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                        if route == .insights {
+                            planJumpCount += 1
+                        } else {
+                            onOpenRoute(route)
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(route.buttonTitle)
+                            Image(systemName: "arrow.up.right")
+                        }
+                        .font(Neu.label(14))
+                        .foregroundStyle(Neu.accent)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            if !message.isUser { Spacer(minLength: 28) }
+        }
+    }
+
+    private func roadrunnerText(_ message: RoadrunnerMessage) -> Text {
+        guard !message.isUser else { return Text(message.text) }
+        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        if let attributed = try? AttributedString(markdown: message.text, options: options) {
+            return Text(attributed)
+        }
+        return Text(message.text)
     }
 
     private var lastUpdatedText: String {
@@ -417,16 +640,17 @@ struct PersonalizedInsightsView: View {
     private func hero(_ plan: CoachPlan) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Your read")
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .font(Neu.label(12))
                 .foregroundStyle(Neu.accent)
                 .textCase(.uppercase)
                 .tracking(0.8)
             Text(plan.headline)
-                .font(Neu.serif(26, weight: .regular))
+                .font(Neu.display(26))
+                .italic()
                 .foregroundStyle(Neu.ink)
                 .fixedSize(horizontal: false, vertical: true)
             Text(plan.summary)
-                .font(.system(size: 16, weight: .regular, design: .rounded))
+                .font(Neu.body(16))
                 .foregroundStyle(Neu.ink.opacity(0.82))
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
@@ -448,10 +672,10 @@ struct PersonalizedInsightsView: View {
     private func ageChip(_ label: String, value: Double) -> some View {
         VStack(spacing: 4) {
             Text(label)
-                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .font(Neu.emphasis(11))
                 .foregroundStyle(Neu.muted)
             Text(String(format: "%.1f", value))
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .font(Neu.number(18))
                 .foregroundStyle(Neu.ink)
                 .monospacedDigit()
         }
@@ -463,15 +687,16 @@ struct PersonalizedInsightsView: View {
     private func readableBlock(kicker: String, title: String, body: String, tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(kicker)
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .font(Neu.label(11))
                 .foregroundStyle(tint)
                 .textCase(.uppercase)
                 .tracking(0.7)
             Text(title)
-                .font(Neu.serif(20, weight: .regular))
+                .font(Neu.heading(20))
+                .italic()
                 .foregroundStyle(Neu.ink)
             Text(body)
-                .font(.system(size: 15, weight: .regular, design: .rounded))
+                .font(Neu.body())
                 .foregroundStyle(Neu.ink.opacity(0.8))
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
@@ -496,10 +721,10 @@ struct PersonalizedInsightsView: View {
                 .padding(.top, 6)
             VStack(alignment: .leading, spacing: 4) {
                 Text(driver.factor)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(Neu.button(16))
                     .foregroundStyle(Neu.ink)
                 Text(driver.note)
-                    .font(.system(size: 14, weight: .regular, design: .rounded))
+                    .font(Neu.body(14))
                     .foregroundStyle(Neu.ink.opacity(0.75))
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -517,18 +742,19 @@ struct PersonalizedInsightsView: View {
                     Image(systemName: symbol)
                         .foregroundStyle(tint)
                     Text(title)
-                        .font(Neu.serif(20, weight: .regular))
+                        .font(Neu.heading(20))
+                        .italic()
                         .foregroundStyle(Neu.ink)
                 }
                 ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                     HStack(alignment: .top, spacing: 10) {
                         Text("\(index + 1)")
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .font(Neu.label(13))
                             .foregroundStyle(tint)
                             .frame(width: 22, height: 22)
                             .background(tint.opacity(0.15), in: Circle())
                         Text(item)
-                            .font(.system(size: 15, weight: .regular, design: .rounded))
+                            .font(Neu.body())
                             .foregroundStyle(Neu.ink.opacity(0.85))
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -554,7 +780,7 @@ struct HistoryView: View {
             if state.ageHistory.isEmpty && state.scanHistory.isEmpty {
                 Spacer(minLength: 0)
                 Text("Scans you complete will land here and stay stored.")
-                    .font(Neu.serif(16, weight: .light))
+                    .font(Neu.serif(16))
                     .italic()
                     .foregroundStyle(Neu.muted)
                     .frame(maxWidth: .infinity)
@@ -565,11 +791,11 @@ struct HistoryView: View {
                         ForEach(state.ageHistory.reversed()) { reading in
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(reading.date, format: .dateTime.month(.abbreviated).day().year().hour().minute())
-                                    .font(Neu.serif(15, weight: .light))
+                                    .font(Neu.serif(15))
                                     .italic()
                                     .foregroundStyle(Neu.muted)
                                 Text("Real \(fmt(reading.chronologicalAge))  ·  Bio \(fmt(reading.biologicalAge))  ·  Cardiac \(fmt(reading.cardiacAge))  ·  Resp \(fmt(reading.respiratoryAge))")
-                                    .font(.body)
+                                    .font(Neu.body())
                                     .foregroundStyle(Neu.ink)
                             }
                             .padding(16)

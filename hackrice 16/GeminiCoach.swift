@@ -125,6 +125,50 @@ struct CoachPlan: Hashable, Codable {
     }
 }
 
+struct RoadrunnerMessage: Identifiable, Hashable, Codable {
+    var id: UUID
+    var isUser: Bool
+    var text: String
+    var createdAt: Date
+    var route: RoadrunnerRoute?
+
+    init(
+        id: UUID = UUID(),
+        isUser: Bool,
+        text: String,
+        createdAt: Date = .now,
+        route: RoadrunnerRoute? = nil
+    ) {
+        self.id = id
+        self.isUser = isUser
+        self.text = text
+        self.createdAt = createdAt
+        self.route = route
+    }
+}
+
+enum RoadrunnerRoute: String, Codable, Hashable {
+    case dash
+    case data
+    case insights
+    case history
+    case add
+    case settings
+    case scan
+
+    var buttonTitle: String {
+        switch self {
+        case .dash: "Open Dash"
+        case .data: "Open Data"
+        case .insights: "See plan below"
+        case .history: "Open History"
+        case .add: "Open Add"
+        case .settings: "Open Profile"
+        case .scan: "Take a scan"
+        }
+    }
+}
+
 private struct GeminiPlanPayload: Codable {
     var headline: String?
     var summary: String
@@ -167,6 +211,7 @@ enum GeminiCoach {
     private static let models = [
         "gemini-3.6-flash"
     ]
+    private static let maxQuestionCharacters = 240
 
     private static var apiKey: String {
         (Bundle.main.object(forInfoDictionaryKey: "GEMINI_API_KEY") as? String)?
@@ -220,6 +265,78 @@ enum GeminiCoach {
             state.persistSoon()
         } catch {
             state.coachStatus = error.localizedDescription
+        }
+    }
+
+    @MainActor
+    static func askRoadrunner(_ question: String, for state: UserRecoveryState) async {
+        let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let asked = String(trimmed.prefix(maxQuestionCharacters))
+        let generation = state.roadrunnerGeneration
+        state.roadrunnerMessages.append(RoadrunnerMessage(isUser: true, text: asked))
+        state.roadrunnerStatus = nil
+
+        if let local = RoadrunnerGuide.resolve(asked, state: state) {
+            guard generation == state.roadrunnerGeneration else { return }
+            state.roadrunnerMessages.append(
+                RoadrunnerMessage(isUser: false, text: local.text, route: local.route)
+            )
+            return
+        }
+
+        if !RoadrunnerGuide.isOnTopic(asked) {
+            guard generation == state.roadrunnerGeneration else { return }
+            state.roadrunnerMessages.append(
+                RoadrunnerMessage(
+                    isUser: false,
+                    text: "I only talk about your outrunn scan, ages, wearables, and Insights plan."
+                )
+            )
+            return
+        }
+
+        if !state.hasCompletedBaseline {
+            guard generation == state.roadrunnerGeneration else { return }
+            state.roadrunnerMessages.append(
+                RoadrunnerMessage(
+                    isUser: false,
+                    text: "Scan first from Dash. That’s how outrunn gets your ages and plan.",
+                    route: .scan
+                )
+            )
+            return
+        }
+
+        guard state.roadrunnerAsksRemaining > 0 else {
+            guard generation == state.roadrunnerGeneration else { return }
+            state.roadrunnerMessages.append(
+                RoadrunnerMessage(
+                    isUser: false,
+                    text: "That’s today’s Gemini limit. Finding a screen still works — try Data, Insights, or come back tomorrow."
+                )
+            )
+            return
+        }
+
+        guard !apiKey.isEmpty else {
+            state.roadrunnerStatus = "Missing Gemini API key."
+            return
+        }
+        guard !state.isAskingRoadrunner else { return }
+        state.isAskingRoadrunner = true
+        defer { state.isAskingRoadrunner = false }
+
+        do {
+            let parsed = try await requestRoadrunnerReply(question: asked, state: state)
+            guard generation == state.roadrunnerGeneration else { return }
+            state.consumeRoadrunnerAsk()
+            state.roadrunnerMessages.append(
+                RoadrunnerMessage(isUser: false, text: parsed.text, route: parsed.route)
+            )
+        } catch {
+            guard generation == state.roadrunnerGeneration else { return }
+            state.roadrunnerStatus = error.localizedDescription
         }
     }
 
@@ -302,6 +419,113 @@ enum GeminiCoach {
         return String(data: data, encoding: .utf8) ?? "{}"
     }
 
+    @MainActor
+    private static func requestRoadrunnerReply(question: String, state: UserRecoveryState) async throws -> (text: String, route: RoadrunnerRoute?) {
+        var lastError: Error = URLError(.badServerResponse)
+        for model in models {
+            do {
+                return try await requestRoadrunnerReply(model: model, question: question, state: state)
+            } catch {
+                lastError = error
+            }
+        }
+        throw lastError
+    }
+
+    @MainActor
+    private static func requestRoadrunnerReply(model: String, question: String, state: UserRecoveryState) async throws -> (text: String, route: RoadrunnerRoute?) {
+        let prompt = """
+        Athlete brief:
+        \(RoadrunnerGuide.brief(for: state))
+
+        Question:
+        \(question)
+        """
+        let raw = try await generateText(
+            model: model,
+            systemPrompt: roadrunnerPrompt,
+            userText: prompt,
+            temperature: 0.5,
+            json: false,
+            maxOutputTokens: nil
+        )
+        return parseRoadrunnerPayload(raw)
+    }
+
+    private static func parseRoadrunnerPayload(_ raw: String) -> (text: String, route: RoadrunnerRoute?) {
+        let cleaned = raw
+            .replacingOccurrences(of: "```json", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let object = jsonObject(from: cleaned) {
+            let say = jsonString(object, keys: ["say", "text", "reply", "answer", "message", "content"])
+                ?? object.values.compactMap { $0 as? String }
+                    .filter { RoadrunnerRoute(rawValue: $0.lowercased()) == nil }
+                    .max(by: { $0.count < $1.count })
+            let open = jsonString(object, keys: ["open", "route", "tab"])?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            let route = open.flatMap(RoadrunnerRoute.init(rawValue:))
+            if let say, !say.isEmpty {
+                return (sanitizeReply(say), route)
+            }
+        }
+
+        var text = cleaned
+        var route: RoadrunnerRoute?
+        if let match = text.range(
+            of: #"\nopen:\s*([a-z]+)\s*$"#,
+            options: [.regularExpression, .caseInsensitive]
+        ) {
+            let line = String(text[match])
+            let key = line
+                .replacingOccurrences(of: "open:", with: "", options: .caseInsensitive)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+            route = RoadrunnerRoute(rawValue: key)
+            text.removeSubrange(match)
+        }
+        return (sanitizeReply(text), route)
+    }
+
+    private static func jsonObject(from text: String) -> [String: Any]? {
+        let slices: [String]
+        if let range = text.range(of: "\\{[\\s\\S]*\\}", options: .regularExpression) {
+            slices = [String(text[range]), text]
+        } else {
+            slices = [text]
+        }
+        for slice in slices {
+            guard let data = slice.data(using: .utf8),
+                  let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            else { continue }
+            return object
+        }
+        return nil
+    }
+
+    private static func jsonString(_ object: [String: Any], keys: [String]) -> String? {
+        for key in keys {
+            if let value = object[key] as? String, !value.isEmpty {
+                return value
+            }
+            if let values = object[key] as? [String] {
+                let joined = values.joined(separator: " ")
+                if !joined.isEmpty { return joined }
+            }
+        }
+        return nil
+    }
+
+    private static func sanitizeReply(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "```json", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .replacingOccurrences(of: "\\n", with: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private static func requestPlan(payloadJSON: String) async throws -> GeminiPlanPayload {
         var lastError: Error = URLError(.badServerResponse)
         for model in models {
@@ -315,14 +539,6 @@ enum GeminiCoach {
     }
 
     private static func requestPlan(model: String, payloadJSON: String) async throws -> GeminiPlanPayload {
-        var components = URLComponents(
-            string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent"
-        )
-        components?.queryItems = [URLQueryItem(name: "key", value: apiKey)]
-        guard let url = components?.url else {
-            throw URLError(.badURL)
-        }
-
         let body: [String: Any] = [
             "systemInstruction": [
                 "parts": [
@@ -333,7 +549,7 @@ enum GeminiCoach {
                 [
                     "role": "user",
                     "parts": [
-                        ["text": "Analyze this outrun athlete snapshot and return JSON only:\n\(payloadJSON)"]
+                        ["text": "Analyze this outrunn athlete snapshot and return JSON only:\n\(payloadJSON)"]
                     ]
                 ]
             ],
@@ -342,6 +558,64 @@ enum GeminiCoach {
                 "responseMimeType": "application/json"
             ]
         ]
+
+        let data = try await postGenerate(model: model, body: body)
+        let text = try extractText(from: data)
+        let cleaned = text
+            .replacingOccurrences(of: "```json", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let jsonData = cleaned.data(using: .utf8) else {
+            throw URLError(.cannotParseResponse)
+        }
+        return try JSONDecoder().decode(GeminiPlanPayload.self, from: jsonData)
+    }
+
+    private static func generateText(
+        model: String,
+        systemPrompt: String,
+        userText: String,
+        temperature: Double,
+        json: Bool,
+        maxOutputTokens: Int?
+    ) async throws -> String {
+        var config: [String: Any] = [
+            "temperature": temperature
+        ]
+        if let maxOutputTokens {
+            config["maxOutputTokens"] = maxOutputTokens
+        }
+        if json {
+            config["responseMimeType"] = "application/json"
+        }
+        let body: [String: Any] = [
+            "systemInstruction": [
+                "parts": [
+                    ["text": systemPrompt]
+                ]
+            ],
+            "contents": [
+                [
+                    "role": "user",
+                    "parts": [
+                        ["text": userText]
+                    ]
+                ]
+            ],
+            "generationConfig": config
+        ]
+        let data = try await postGenerate(model: model, body: body)
+        return try extractText(from: data)
+    }
+
+    private static func postGenerate(model: String, body: [String: Any]) async throws -> Data {
+        var components = URLComponents(
+            string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent"
+        )
+        components?.queryItems = [URLQueryItem(name: "key", value: apiKey)]
+        guard let url = components?.url else {
+            throw URLError(.badURL)
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -359,26 +633,19 @@ enum GeminiCoach {
                 userInfo: [NSLocalizedDescriptionKey: "Gemini request failed (\(status)). \(snippet)"]
             )
         }
-
-        let text = try extractText(from: data)
-        let cleaned = text
-            .replacingOccurrences(of: "```json", with: "")
-            .replacingOccurrences(of: "```", with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let jsonData = cleaned.data(using: .utf8) else {
-            throw URLError(.cannotParseResponse)
-        }
-        return try JSONDecoder().decode(GeminiPlanPayload.self, from: jsonData)
+        return data
     }
 
     private static func extractText(from data: Data) throws -> String {
         let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         let candidates = object?["candidates"] as? [[String: Any]]
         let content = candidates?.first?["content"] as? [String: Any]
-        let parts = content?["parts"] as? [[String: Any]]
-        if let text = parts?.compactMap({ $0["text"] as? String }).joined(), !text.isEmpty {
-            return text
-        }
+        let parts = content?["parts"] as? [[String: Any]] ?? []
+        let text = parts.compactMap { part -> String? in
+            if part["thought"] as? Bool == true { return nil }
+            return part["text"] as? String
+        }.joined()
+        if !text.isEmpty { return text }
         throw URLError(.cannotParseResponse)
     }
 
@@ -430,8 +697,26 @@ enum GeminiCoach {
         return !(sleepOK && hrvOK && rhrOK)
     }
 
+    private static let roadrunnerPrompt = """
+    You are roadrunner, outrunn's in-app recovery guide.
+
+    Answer only this question. You get a short athlete brief, not chat history and not extra files.
+
+    Stay inside outrunn: this athlete's scan, Real / Biological / Cardiac / Pulmonary Age, Apple Health or Garmin numbers, and the Insights plan. If the question is outside that, say you only talk about their outrunn data.
+
+    If they ask where something is, or what an existing screen means, reply in 1–2 sentences and end with:
+    OPEN: dash|data|insights|history|add|settings|scan
+
+    For why a number moved or what to do next: use their actual numbers, explain the likely driver, then give concrete next steps. Do not add an OPEN line unless a screen really helps.
+
+    Voice:
+    - Complete, useful answers. Do not truncate your thought. Short paragraphs are fine.
+    - Names: Real Age, Biological Age, Cardiac Age, Pulmonary Age.
+    - No diagnosis, no drugs, no invented studies, no JSON.
+    """
+
     private static let systemPrompt = """
-    You are outrun's recovery scientist. Inputs are numbers only (Presage camera scan + Apple Health / Garmin / watch). Never video.
+    You are outrunn's recovery scientist. Inputs are numbers only (Presage camera scan + Apple Health / Garmin / watch). Never video.
 
     Compare THREE layers:
     1) Scan (pulse, breathing, HRR, signal quality) — camera physiology at this moment.
@@ -482,4 +767,238 @@ enum GeminiCoach {
     },
     caution (string or null).
     """
+}
+
+enum RoadrunnerGuide {
+    struct Answer {
+        var text: String
+        var route: RoadrunnerRoute?
+    }
+
+    @MainActor
+    static func resolve(_ question: String, state: UserRecoveryState) -> Answer? {
+        let q = normalize(question)
+        guard !q.isEmpty else { return nil }
+
+        if let fact = factAnswer(q, state: state) {
+            return fact
+        }
+
+        let interpretive = containsAny(q, [
+            "why", "should i", "what should", "how can i", "how do i improve",
+            "how do i lower", "how do i reduce", "how do i fix", "tonight",
+            "what do i do", "what would you"
+        ])
+        let wantsPlace = containsAny(q, [
+            "where", "find", "take me", "open", "go to", "show me", "which tab",
+            "which page", "where can i", "navigate", "bring me", "how do i get",
+            "how do i find", "how do i open", "how do i see", "how do i take",
+            "how do i start", "how do i scan", "take me to"
+        ])
+        let wantsExplain = containsAny(q, [
+            "what is", "whats", "explain", "what does", "meaning", "methodology",
+            "how we got", "how you got", "how did you", "how do you calculate",
+            "how is it calculated", "how is this calculated", "tell me about",
+            "what are"
+        ])
+
+        guard wantsPlace || (wantsExplain && !interpretive) else { return nil }
+        guard let route = route(for: q) else { return nil }
+        return Answer(text: copy(for: route), route: route)
+    }
+
+    static func isOnTopic(_ question: String) -> Bool {
+        let q = normalize(question)
+        if containsAny(q, [
+            "ignore previous", "ignore all", "system prompt", "you are now",
+            "jailbreak", "api key", "developer mode", "repeat this prompt",
+            "reveal your", "hidden instructions"
+        ]) {
+            return false
+        }
+        return containsAny(q, [
+            "age", "scan", "pulse", "heart", "cardiac", "pulmonary", "biological",
+            "recovery", "sleep", "stress", "breathing", "hrv", "insight", "plan",
+            "train", "workout", "dash", "data", "history", "garmin", "health",
+            "outrun", "outrunn", "roadrunner", "roadruner", "baseline", "camera", "zone", "steps",
+            "tonight", "this week", "should i", "why is", "what should",
+            "how can i", "supplement", "real age", "wearable", "apple",
+            "presage", "methodology", "older", "younger", "rhr", "vo2",
+            "breath", "resting", "hrr"
+        ])
+    }
+
+    @MainActor
+    static func brief(for state: UserRecoveryState) -> String {
+        let chrono = state.chronologicalAge
+        let scan = state.latestScan
+        let health = state.healthContext
+        let plan = state.latestCoachPlan
+        var lines = [
+            "Real Age: \(years(chrono))",
+            "Biological Age: \(years(state.biologicalAge)) (\(vsReal(state.biologicalAge, chrono: chrono)))",
+            "Cardiac Age: \(years(state.cardiacAge)) (\(vsReal(state.cardiacAge, chrono: chrono)))",
+            "Pulmonary Age: \(years(state.pulmonaryAge)) (\(vsReal(state.pulmonaryAge, chrono: chrono)))"
+        ]
+        if let scan {
+            lines.append(
+                "Last scan: pulse \(scan.cameraHeartRate) bpm, breathing \(Int(scan.respiratoryRate.rounded()))/min, recovery \(scan.hrrObserved) beats, stress \(Int(scan.stressScore.rounded())), quality \(Int(scan.signalQuality.rounded())), \(scan.minutesSinceAerobicActivity) min after workout"
+            )
+        }
+        if let health {
+            lines.append(
+                "Wearables: sleep \(String(format: "%.1f", health.sleepHours)) h, RHR \(health.restingHeartRate), HRV \(health.hrvSDNN), steps \(health.stepCount)"
+            )
+        } else if state.garminData.sleepScore > 0 {
+            lines.append(
+                "Wearables: sleep \(state.garminData.sleepScore)%, RHR \(state.garminData.restingHeartRate), HRV \(state.garminData.hrvStatus)"
+            )
+        }
+        if let plan {
+            lines.append("Plan: \(plan.headline)")
+            if let today = plan.today.first {
+                lines.append("Today: \(today)")
+            }
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    @MainActor
+    private static func factAnswer(_ q: String, state: UserRecoveryState) -> Answer? {
+        let askingMine = containsAny(q, ["what is my", "whats my", "how old am i", "what are my"])
+        guard askingMine, state.hasCompletedBaseline else { return nil }
+        let chrono = state.chronologicalAge
+        if containsAny(q, ["biological"]) {
+            return Answer(
+                text: "Biological Age is \(years(state.biologicalAge)) — \(vsReal(state.biologicalAge, chrono: chrono)).",
+                route: .data
+            )
+        }
+        if containsAny(q, ["cardiac", "heart age"]) {
+            return Answer(
+                text: "Cardiac Age is \(years(state.cardiacAge)) — \(vsReal(state.cardiacAge, chrono: chrono)).",
+                route: .data
+            )
+        }
+        if containsAny(q, ["pulmonary", "lung"]) {
+            return Answer(
+                text: "Pulmonary Age is \(years(state.pulmonaryAge)) — \(vsReal(state.pulmonaryAge, chrono: chrono)).",
+                route: .data
+            )
+        }
+        if containsAny(q, ["real age", "calendar"]) {
+            return Answer(text: "Real Age is \(years(chrono)).", route: .data)
+        }
+        if containsAny(q, ["pulse", "heart rate", " bpm"]) {
+            let pulse = state.latestScan?.cameraHeartRate ?? state.cameraHeartRate
+            guard pulse > 0 else { return nil }
+            return Answer(text: "Last scan pulse was \(pulse) bpm.", route: .data)
+        }
+        if containsAny(q, ["breathing", "respiratory"]) {
+            guard let rate = state.latestScan?.respiratoryRate, rate > 0 else { return nil }
+            return Answer(text: "Last scan breathing was \(Int(rate.rounded())) breaths/min.", route: .data)
+        }
+        if containsAny(q, ["stress"]) {
+            guard let score = state.latestScan?.stressScore, score > 0 else { return nil }
+            return Answer(text: "Last scan stress was \(Int(score.rounded())).", route: .data)
+        }
+        if containsAny(q, ["sleep"]) {
+            if state.garminData.sleepScore > 0 {
+                return Answer(text: "Sleep is \(state.garminData.sleepScore)%.", route: .data)
+            }
+            if let hours = state.healthContext?.sleepHours, hours > 0 {
+                return Answer(text: "Last night was \(String(format: "%.1f", hours)) hours of sleep.", route: .data)
+            }
+        }
+        return nil
+    }
+
+    private static func route(for q: String) -> RoadrunnerRoute? {
+        if containsAny(q, ["scan", "camera", "baseline", "presage", "rppg", "face scan"]) {
+            return .scan
+        }
+        if containsAny(q, ["history", "past scan", "previous scan", "old scan", "past result"]) {
+            return .history
+        }
+        if containsAny(q, [
+            "apple health", "healthkit", "garmin", "whoop", "oura",
+            "connect a", "connect my", "wearable"
+        ]) {
+            return .add
+        }
+        if hasWord(q, "add") && containsAny(q, ["tab", "page", "screen", "where", "open", "go to"]) {
+            return .add
+        }
+        if containsAny(q, [
+            "settings", "profile", "log out", "logout", "sign out", "reset",
+            "haptics", "account", "gear icon", "the gear"
+        ]) {
+            return .settings
+        }
+        if containsAny(q, [
+            "methodology", "how we got", "how you got", "how did you",
+            "how do you calculate", "how is it calculated", "data tab",
+            "data page", "data screen", "the numbers", "my numbers", "pulse",
+            "breathing", "stress", "cardiac age", "biological age",
+            "pulmonary age", "real age"
+        ]) || hasWord(q, "data") {
+            return .data
+        }
+        if containsAny(q, ["insights", "my plan", "the plan", "supplement", "repopulate", "do this today"]) {
+            return .insights
+        }
+        if containsAny(q, ["dashboard", "age chart", "age graph", "age trend"])
+            || hasWord(q, "dash") || hasWord(q, "chart") || hasWord(q, "graph") || hasWord(q, "trends") {
+            return .dash
+        }
+        return nil
+    }
+
+    private static func copy(for route: RoadrunnerRoute) -> String {
+        switch route {
+        case .scan:
+            "Take a scan from Dash. I’ll open it."
+        case .data:
+            "Those numbers live on Data — ages, pulse, breathing, recovery, and how we got them."
+        case .history:
+            "Past scans are on History."
+        case .add:
+            "Connect Apple Health or Garmin from Add."
+        case .settings:
+            "Profile, reset, and log out are behind the gear icon."
+        case .dash:
+            "Trends and the age chart are on Dash."
+        case .insights:
+            "Your plan is on this Insights page, just below the chat."
+        }
+    }
+
+    private static func normalize(_ text: String) -> String {
+        text.lowercased()
+            .replacingOccurrences(of: "['’]", with: "", options: .regularExpression)
+            .replacingOccurrences(of: "[^a-z0-9\\s]", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func containsAny(_ q: String, _ phrases: [String]) -> Bool {
+        phrases.contains { q.contains($0) }
+    }
+
+    private static func hasWord(_ q: String, _ word: String) -> Bool {
+        q.range(of: "\\b\(word)\\b", options: .regularExpression) != nil
+    }
+
+    private static func years(_ value: Double) -> String {
+        String(format: "%.1f", value)
+    }
+
+    private static func vsReal(_ value: Double, chrono: Double) -> String {
+        let delta = value - chrono
+        if abs(delta) < 0.3 { return "about the same as Real Age" }
+        if delta > 0 {
+            return String(format: "%.1f years older than Real Age", delta)
+        }
+        return String(format: "%.1f years younger than Real Age", abs(delta))
+    }
 }

@@ -10,9 +10,9 @@ import SwiftUI
 struct OutrunSplashView: View {
     var onContinue: () -> Void
 
-    private let letters = Array("outrun")
+    private let letters = BrandWordmark.Kind.outrun.glyphCount
 
-    @State private var revealed = Array(repeating: false, count: 6)
+    @State private var revealed = Array(repeating: false, count: BrandWordmark.Kind.outrun.glyphCount)
     @State private var underline: CGFloat = 0
     @State private var hintOpacity: Double = 0
     @State private var markScale: CGFloat = 0.96
@@ -25,21 +25,8 @@ struct OutrunSplashView: View {
                 Spacer()
 
                 VStack(spacing: 22) {
-                    HStack(spacing: 1) {
-                        ForEach(letters.indices, id: \.self) { index in
-                            Text(String(letters[index]))
-                                .font(Neu.serif(58))
-                                .italic()
-                                .foregroundStyle(index == 0 && underline > 0.6 ? Neu.accent : Neu.ink)
-                                .offset(
-                                    x: revealed[index] ? 0 : 28,
-                                    y: revealed[index] ? 0 : 18
-                                )
-                                .opacity(revealed[index] ? 1 : 0)
-                                .blur(radius: revealed[index] ? 0 : 8)
-                        }
-                    }
-                    .scaleEffect(markScale)
+                    BrandWordmark(kind: .outrun, size: 58, revealed: revealed)
+                        .scaleEffect(markScale)
 
                     Capsule()
                         .fill(Neu.accent.opacity(0.85))
@@ -47,7 +34,7 @@ struct OutrunSplashView: View {
                 }
 
                 Text("Tap to Begin")
-                    .font(Neu.serif(13, weight: .light))
+                    .font(Neu.serif(13))
                     .italic()
                     .tracking(1.4)
                     .foregroundStyle(Neu.muted)
@@ -69,7 +56,7 @@ struct OutrunSplashView: View {
     }
 
     private func animateWordmark() {
-        for index in letters.indices {
+        for index in 0..<letters {
             withAnimation(
                 .spring(response: 0.62, dampingFraction: 0.78)
                 .delay(Double(index) * 0.07)

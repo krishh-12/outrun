@@ -38,6 +38,9 @@ struct RecoverySnapshot: Codable {
     var profileEmail: String?
     var healthContext: HealthContext?
     var latestCoachPlan: CoachPlan?
+    var roadrunnerMessages: [RoadrunnerMessage]?
+    var roadrunnerAskCount: Int?
+    var roadrunnerAskDay: Date?
 }
 
 enum RecoveryPersistence {

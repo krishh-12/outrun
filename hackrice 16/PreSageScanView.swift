@@ -183,7 +183,7 @@ struct PreSageScanView: View {
 
             if let startError {
                 Text(startError)
-                    .font(.caption.weight(.semibold))
+                    .font(Neu.label(12))
                     .foregroundStyle(.orange)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 8)
@@ -197,7 +197,7 @@ struct PreSageScanView: View {
                     if let health = state.healthContext {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Apple Health Context")
-                                .font(.caption.weight(.semibold))
+                                .font(Neu.label(12))
                                 .foregroundStyle(.white.opacity(0.8))
                             Text(String(
                                 format: "Sleep %.1fh · %d steps · HRV %d ms. These lifestyle factors are separated from the camera scan so a rough night or low-step day is not treated as true biological aging.",
@@ -205,7 +205,7 @@ struct PreSageScanView: View {
                                 health.stepCount,
                                 health.hrvSDNN
                             ))
-                            .font(.caption2)
+                            .font(Neu.body(11))
                             .foregroundStyle(.white.opacity(0.72))
                         }
                         .padding(12)
@@ -213,7 +213,7 @@ struct PreSageScanView: View {
                         .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     } else {
                         Text("Link Apple Health in Add to separate sleep and steps from this scan.")
-                            .font(.caption2)
+                            .font(Neu.body(11))
                             .foregroundStyle(.white.opacity(0.7))
                     }
 
@@ -272,7 +272,7 @@ struct PreSageScanView: View {
                     .frame(height: 120)
 
                     Text("Keep face and upper chest visible and still. Pulse ~12s, breathing ~30s, HRV ~60s. Tap Stop to save vitals and return to the dashboard. Video is not stored.")
-                        .font(.caption2)
+                        .font(Neu.body(11))
                         .foregroundStyle(.white.opacity(0.7))
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
@@ -317,9 +317,9 @@ struct PreSageScanView: View {
                     ProgressView()
                         .tint(.white)
                     Image(systemName: "camera.viewfinder")
-                        .font(.system(size: 40, weight: .semibold))
+                        .font(Neu.number(40))
                     Text(previewPlaceholderText)
-                        .font(.headline)
+                        .font(Neu.heading(17))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 16)
                 }
@@ -350,7 +350,7 @@ struct PreSageScanView: View {
                     dismiss()
                 }
             }
-            .font(.caption.bold())
+            .font(Neu.label(12))
             .foregroundStyle(.white)
 
             badge(title: "Status", value: statusText, color: statusColor)
@@ -366,7 +366,7 @@ struct PreSageScanView: View {
                 }
             }) {
                 Text(isSaving ? "Saving" : startStopTitle)
-                    .font(.caption.bold())
+                    .font(Neu.label(12))
                     .padding(.horizontal, compact ? 12 : 16)
                     .padding(.vertical, 8)
                     .background(sdk.processingStatus == .running ? Neu.accent : .white, in: Capsule())
@@ -390,12 +390,16 @@ struct PreSageScanView: View {
                     .fill(accent)
                     .frame(width: 8, height: 8)
                 Text(title)
-                    .font(.caption.weight(.semibold))
+                    .font(Neu.label(12))
                     .foregroundStyle(.white)
             }
 
             Text(value)
-                .font(.system(size: compact ? 21 : 24, weight: .bold, design: monospacedValue ? .monospaced : .rounded))
+                .font(
+                    monospacedValue
+                        ? .system(size: compact ? 21 : 24, weight: .semibold, design: .monospaced)
+                        : Neu.number(compact ? 21 : 24)
+                )
                 .foregroundStyle(valueColor)
                 .monospacedDigit()
                 .lineLimit(1)
@@ -413,7 +417,7 @@ struct PreSageScanView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: compact ? 6 : 8) {
             Text(title)
-                .font(.caption.weight(.semibold))
+                .font(Neu.label(12))
                 .foregroundStyle(.white)
 
             ZStack {
@@ -444,7 +448,7 @@ struct PreSageScanView: View {
                 .fill(color)
                 .frame(width: 8, height: 8)
             Text("\(title): \(value)")
-                .font(.caption.weight(.semibold))
+                .font(Neu.label(12))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
@@ -539,7 +543,7 @@ struct PreSageScanView: View {
 
         let cameraAllowed = await ensureCameraAccess()
         guard cameraAllowed else {
-            startError = "Camera access is required. Enable it in Settings → outrun → Camera, then tap Start."
+            startError = "Camera access is required. Enable it in Settings → outrunn → Camera, then tap Start."
             return
         }
 

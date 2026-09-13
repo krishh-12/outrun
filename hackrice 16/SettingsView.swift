@@ -40,11 +40,11 @@ struct SettingsView: View {
 
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Email")
-                                    .font(Neu.serif(13, weight: .light))
+                                    .font(Neu.serif(13))
                                     .italic()
                                     .foregroundStyle(Neu.muted)
                                 Text(auth.currentUser?.email ?? state.profileEmail ?? "Not set")
-                                    .font(Neu.serif(16, weight: .light))
+                                    .font(Neu.serif(16))
                                     .italic()
                                     .foregroundStyle(Neu.ink)
                             }
@@ -56,7 +56,7 @@ struct SettingsView: View {
                             saveProfile()
                         } label: {
                             Text(saveMessage ?? "Save Profile")
-                                .font(Neu.serif(17, weight: .light))
+                                .font(Neu.serif(17))
                                 .italic()
                                 .foregroundStyle(Neu.ink)
                                 .frame(maxWidth: .infinity)
@@ -84,7 +84,7 @@ struct SettingsView: View {
                             showResetConfirm = true
                         } label: {
                             Text("Reset Data")
-                                .font(Neu.serif(17, weight: .light))
+                                .font(Neu.serif(17))
                                 .italic()
                                 .foregroundStyle(Neu.older)
                                 .frame(maxWidth: .infinity)
@@ -96,7 +96,7 @@ struct SettingsView: View {
                             showLogOutConfirm = true
                         } label: {
                             Text("Log Out")
-                                .font(Neu.serif(17, weight: .light))
+                                .font(Neu.serif(17))
                                 .italic()
                                 .foregroundStyle(Neu.older)
                                 .frame(maxWidth: .infinity)
@@ -131,7 +131,7 @@ struct SettingsView: View {
             } message: {
                 Text("This removes scans and age readings for the selected period. Profile and linked devices stay.")
             }
-            .confirmationDialog("Log out of outrun?", isPresented: $showLogOutConfirm, titleVisibility: .visible) {
+            .confirmationDialog("Log out of outrunn?", isPresented: $showLogOutConfirm, titleVisibility: .visible) {
                 Button("Log Out", role: .destructive) {
                     dismiss()
                     onLogOut()
@@ -180,7 +180,7 @@ struct SettingsView: View {
 
     private func sectionTitle(_ title: String) -> some View {
         Text(title)
-            .font(Neu.serif(22))
+            .font(Neu.display(22))
             .italic()
             .foregroundStyle(Neu.ink)
     }
@@ -188,7 +188,7 @@ struct SettingsView: View {
     private func labeledField(_ title: String, text: Binding<String>, field: Field) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
-                .font(Neu.serif(13, weight: .light))
+                .font(Neu.serif(13))
                 .italic()
                 .foregroundStyle(Neu.muted)
             NeuField(placeholder: title, text: text)
@@ -199,7 +199,7 @@ struct SettingsView: View {
     private func toggleRow(_ title: String, isOn: Binding<Bool>) -> some View {
         Toggle(isOn: isOn) {
             Text(title)
-                .font(Neu.serif(16, weight: .light))
+                .font(Neu.serif(16))
                 .italic()
                 .foregroundStyle(Neu.ink)
         }
@@ -210,12 +210,12 @@ struct SettingsView: View {
     private func infoRow(_ title: String, value: String) -> some View {
         HStack {
             Text(title)
-                .font(Neu.serif(16, weight: .light))
+                .font(Neu.serif(16))
                 .italic()
                 .foregroundStyle(Neu.ink)
             Spacer()
             Text(value)
-                .font(Neu.serif(15, weight: .light))
+                .font(Neu.serif(15))
                 .italic()
                 .foregroundStyle(Neu.muted)
         }

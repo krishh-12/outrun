@@ -90,7 +90,7 @@ struct DataView: View {
                         } label: {
                             VStack(spacing: 6) {
                                 Text("See How We Got This Information")
-                                    .font(Neu.serif(16, weight: .light))
+                                    .font(Neu.serif(16))
                                     .italic()
                                     .foregroundStyle(Neu.ink)
                                     .multilineTextAlignment(.center)
@@ -152,21 +152,18 @@ struct DataView: View {
 
     private func ageCircle(_ kind: DataAgeKind, size: CGFloat, isPrimary: Bool) -> some View {
         ZStack {
-            Circle()
-                .fill(Neu.canvas)
-                .shadow(color: Neu.lightShadow, radius: 8, x: -6, y: -6)
-                .shadow(color: Neu.darkShadow, radius: 8, x: 6, y: 6)
+            ConvexShape(shape: Circle())
 
             Circle()
                 .stroke(kind.color.opacity(isPrimary ? 1 : 0.45), lineWidth: isPrimary ? 7 : 5)
 
             VStack(spacing: isPrimary ? 6 : 4) {
                 Text(formattedAge(kind))
-                    .font(.system(size: isPrimary ? 40 : 20, weight: .semibold, design: .rounded))
+                    .font(Neu.number(isPrimary ? 40 : 20))
                     .foregroundStyle(Neu.ink)
                     .monospacedDigit()
                 Text(kind.title)
-                    .font(Neu.serif(isPrimary ? 13 : 10, weight: .light))
+                    .font(Neu.serif(isPrimary ? 13 : 10))
                     .italic()
                     .foregroundStyle(Neu.muted)
                     .multilineTextAlignment(.center)
@@ -183,11 +180,11 @@ struct DataView: View {
         let years = yearsVsReal(selected)
         return VStack(alignment: .leading, spacing: 6) {
             Text(deltaHeadline(for: selected, years: years))
-                .font(.system(size: 22, weight: .semibold, design: .rounded))
+                .font(Neu.number(22))
                 .foregroundStyle(deltaColor(years))
                 .fixedSize(horizontal: false, vertical: true)
             Text("Your Real Age is \(String(format: "%.1f", state.chronologicalAge)).")
-                .font(.system(size: 15, design: .rounded))
+                .font(Neu.body())
                 .foregroundStyle(Neu.muted)
         }
         .padding(18)
@@ -198,7 +195,7 @@ struct DataView: View {
     private var compareSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Vs people your Real Age")
-                .font(Neu.serif(18, weight: .light))
+                .font(Neu.serif(18))
                 .italic()
                 .foregroundStyle(Neu.ink)
 
@@ -220,14 +217,14 @@ struct DataView: View {
 
         return VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .font(Neu.emphasis(14))
                 .foregroundStyle(Neu.muted)
             Text(value)
-                .font(.system(size: 36, weight: .semibold, design: .rounded))
+                .font(Neu.number(36))
                 .foregroundStyle(even ? Neu.ink : (better ? Neu.younger : Neu.older))
                 .monospacedDigit()
             Text(detail)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .font(Neu.emphasis(14))
                 .foregroundStyle(even ? Neu.muted : (better ? Neu.younger : Neu.older))
         }
         .padding(16)
@@ -241,7 +238,7 @@ struct DataView: View {
             if !stats.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("From your last scan")
-                        .font(Neu.serif(18, weight: .light))
+                        .font(Neu.serif(18))
                         .italic()
                         .foregroundStyle(Neu.ink)
 
@@ -249,21 +246,21 @@ struct DataView: View {
                         ForEach(stats) { stat in
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(stat.title)
-                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                    .font(Neu.emphasis(13))
                                     .foregroundStyle(Neu.muted)
                                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                                     Text(stat.value)
-                                        .font(.system(size: 32, weight: .semibold, design: .rounded))
+                                        .font(Neu.number(32))
                                         .foregroundStyle(Neu.ink)
                                         .monospacedDigit()
                                     if !stat.unit.isEmpty {
                                         Text(stat.unit)
-                                            .font(.system(size: 13, design: .rounded))
+                                            .font(Neu.body(13))
                                             .foregroundStyle(Neu.muted)
                                     }
                                 }
                                 Text(stat.meaning)
-                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                    .font(Neu.label(14))
                                     .foregroundStyle(stat.meaningColor)
                             }
                             .padding(16)
@@ -282,7 +279,7 @@ struct DataView: View {
             if !factors.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("What’s adding years")
-                        .font(Neu.serif(18, weight: .light))
+                        .font(Neu.serif(18))
                         .italic()
                         .foregroundStyle(Neu.ink)
 
@@ -291,11 +288,11 @@ struct DataView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack {
                                     Text(friendlyFactor(factor.title))
-                                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                                        .font(Neu.emphasis(16))
                                         .foregroundStyle(Neu.ink)
                                     Spacer()
                                     Text(yearDeltaLabel(factor.yearsDelta))
-                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                        .font(Neu.button(16))
                                         .foregroundStyle(factor.yearsDelta > 0.05 ? Neu.older : Neu.younger)
                                         .monospacedDigit()
                                 }
@@ -324,7 +321,7 @@ struct DataView: View {
             showTelemetry = true
         } label: {
             Text("Log extra context")
-                .font(Neu.serif(16, weight: .light))
+                .font(Neu.serif(16))
                 .italic()
                 .foregroundStyle(Neu.ink)
                 .frame(maxWidth: .infinity)
@@ -336,7 +333,7 @@ struct DataView: View {
     private var methodologySection: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("How We Got This")
-                .font(Neu.serif(20, weight: .light))
+                .font(Neu.serif(20))
                 .italic()
                 .foregroundStyle(Neu.ink)
 
@@ -362,11 +359,11 @@ struct DataView: View {
     private func methodologyCard(title: String, body: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(Neu.serif(16, weight: .light))
+                .font(Neu.serif(16))
                 .italic()
                 .foregroundStyle(Neu.ink)
             Text(body)
-                .font(.body)
+                .font(Neu.body())
                 .foregroundStyle(Neu.muted)
         }
         .padding(16)

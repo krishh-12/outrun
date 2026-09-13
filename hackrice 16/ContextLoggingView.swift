@@ -22,7 +22,7 @@ struct ContextLoggingView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 20) {
                         Text("Data Source & Telemetry Control")
-                            .font(Neu.serif(26))
+                            .font(Neu.display(26))
                             .italic()
                             .foregroundStyle(Neu.ink)
 
@@ -36,7 +36,7 @@ struct ContextLoggingView: View {
 
                         if let status = state.healthKitStatus ?? healthKit.statusMessage {
                             Text(status)
-                                .font(Neu.serif(13, weight: .light))
+                                .font(Neu.serif(13))
                                 .italic()
                                 .foregroundStyle(Neu.muted)
                         }
@@ -89,7 +89,7 @@ struct ContextLoggingView: View {
                             .tint(Neu.ink)
                     }
                     Text(isSyncing ? "Syncing…" : "Sync Apple Health Now")
-                        .font(Neu.serif(17, weight: .light))
+                        .font(Neu.serif(17))
                         .italic()
                 }
                 .foregroundStyle(Neu.ink)
@@ -104,7 +104,7 @@ struct ContextLoggingView: View {
                 Text("HRV: \(state.garminData.hrvStatus) ms")
                 Text("Sleep: \(state.garminData.sleepScore)%")
             }
-            .font(.body.monospacedDigit())
+            .font(Neu.number(17).monospacedDigit())
             .foregroundStyle(Neu.ink)
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -129,11 +129,11 @@ struct ContextLoggingView: View {
 
                         VStack(alignment: .leading, spacing: 4) {
                             Text(scenario.title)
-                                .font(Neu.serif(18, weight: .light))
+                                .font(Neu.serif(18))
                                 .italic()
                                 .foregroundStyle(Neu.ink)
                             Text(scenario.summary)
-                                .font(.caption)
+                                .font(Neu.body(12))
                                 .foregroundStyle(Neu.muted)
                         }
 
@@ -155,7 +155,7 @@ struct ContextLoggingView: View {
     private var habitGrid: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Habit context")
-                .font(Neu.serif(16, weight: .light))
+                .font(Neu.serif(16))
                 .italic()
                 .foregroundStyle(Neu.ink)
 
@@ -170,21 +170,19 @@ struct ContextLoggingView: View {
                     } label: {
                         VStack(spacing: 4) {
                             Text(habit.title)
-                                .font(Neu.serif(13, weight: .light))
+                                .font(Neu.serif(13))
                                 .italic()
                                 .foregroundStyle(Neu.ink)
                                 .multilineTextAlignment(.center)
                             Text(habit.penaltyReadout)
-                                .font(.caption2)
+                                .font(Neu.body(11))
                                 .foregroundStyle(on ? Neu.older : Neu.muted)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .padding(.horizontal, 8)
                         .background(
-                            Capsule().fill(Neu.canvas)
-                                .shadow(color: on ? Neu.darkShadow : Neu.lightShadow, radius: on ? 3 : 6, x: on ? 3 : -4, y: on ? 3 : -4)
-                                .shadow(color: on ? Neu.lightShadow : Neu.darkShadow, radius: on ? 3 : 6, x: on ? -2 : 4, y: on ? -2 : 4)
+                            ConvexShape(shape: Capsule(), isPressed: on)
                         )
                     }
                     .buttonStyle(.plain)
