@@ -8,16 +8,16 @@
 import SwiftUI
 
 enum Neu {
-    static let canvas = Color.white
-    static let raised = Color(red: 249.0 / 255.0, green: 236.0 / 255.0, blue: 207.0 / 255.0)
-    static let inset = Color(red: 240.0 / 255.0, green: 226.0 / 255.0, blue: 194.0 / 255.0)
+    static let canvas = Color(red: 251.0 / 255.0, green: 245.0 / 255.0, blue: 227.0 / 255.0)
+    static let raised = Color(red: 251.0 / 255.0, green: 242.0 / 255.0, blue: 222.0 / 255.0)
+    static let inset = Color(red: 245.0 / 255.0, green: 234.0 / 255.0, blue: 210.0 / 255.0)
     static let ink = Color(red: 0.23, green: 0.27, blue: 0.32)
     static let muted = Color(red: 0.48, green: 0.46, blue: 0.40)
     static let accent = Color(red: 0.32, green: 0.68, blue: 0.72)
     static let younger = Color(red: 0.30, green: 0.62, blue: 0.50)
     static let older = Color(red: 0.78, green: 0.42, blue: 0.36)
     static let lightShadow = Color.white
-    static let darkShadow = Color(red: 0.68, green: 0.57, blue: 0.38).opacity(0.38)
+    static let darkShadow = Color(red: 0.36, green: 0.42, blue: 0.44).opacity(0.42)
     static let highlight = Color.white.opacity(0.78)
     static let plotFill = raised
 
