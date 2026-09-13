@@ -131,6 +131,7 @@ struct PreSageScan: Identifiable, Hashable, Codable {
     var vascularScore: Double
     var cameraHeartRate: Int
     var signalQuality: Double
+    var stressScore: Double
 
     init(
         id: UUID = UUID(),
@@ -140,7 +141,8 @@ struct PreSageScan: Identifiable, Hashable, Codable {
         respiratoryRate: Double = 16.5,
         vascularScore: Double = 70,
         cameraHeartRate: Int = 0,
-        signalQuality: Double = 0
+        signalQuality: Double = 0,
+        stressScore: Double = 0
     ) {
         self.id = id
         self.capturedAt = capturedAt
@@ -150,6 +152,25 @@ struct PreSageScan: Identifiable, Hashable, Codable {
         self.vascularScore = vascularScore
         self.cameraHeartRate = cameraHeartRate
         self.signalQuality = signalQuality
+        self.stressScore = stressScore
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, capturedAt, hrrObserved, minutesSinceAerobicActivity
+        case respiratoryRate, vascularScore, cameraHeartRate, signalQuality, stressScore
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        capturedAt = try container.decode(Date.self, forKey: .capturedAt)
+        hrrObserved = try container.decode(Int.self, forKey: .hrrObserved)
+        minutesSinceAerobicActivity = try container.decode(Int.self, forKey: .minutesSinceAerobicActivity)
+        respiratoryRate = try container.decode(Double.self, forKey: .respiratoryRate)
+        vascularScore = try container.decode(Double.self, forKey: .vascularScore)
+        cameraHeartRate = try container.decodeIfPresent(Int.self, forKey: .cameraHeartRate) ?? 0
+        signalQuality = try container.decodeIfPresent(Double.self, forKey: .signalQuality) ?? 0
+        stressScore = try container.decodeIfPresent(Double.self, forKey: .stressScore) ?? 0
     }
 }
 
@@ -749,7 +770,8 @@ final class UserRecoveryState {
         vascularScore: Double,
         minutesSinceAerobicActivity: Int,
         cameraHeartRate: Int = 0,
-        signalQuality: Double = 0
+        signalQuality: Double = 0,
+        stressScore: Double = 0
     ) {
         let scan = PreSageScan(
             hrrObserved: hrrObserved,
@@ -757,7 +779,8 @@ final class UserRecoveryState {
             respiratoryRate: respiratoryRate,
             vascularScore: vascularScore,
             cameraHeartRate: cameraHeartRate,
-            signalQuality: signalQuality
+            signalQuality: signalQuality,
+            stressScore: stressScore
         )
         scanHistory.append(scan)
         latestScan = scan
@@ -1162,14 +1185,16 @@ final class UserRecoveryState {
                 hrrObserved: 34,
                 minutesSinceAerobicActivity: 45,
                 respiratoryRate: 13.2,
-                vascularScore: 74
+                vascularScore: 74,
+                stressScore: 92
             ),
             scanHistory: [
                 PreSageScan(
                     hrrObserved: 34,
                     minutesSinceAerobicActivity: 45,
                     respiratoryRate: 13.2,
-                    vascularScore: 74
+                    vascularScore: 74,
+                    stressScore: 92
                 )
             ],
             hasCompletedBaseline: true,

@@ -31,6 +31,15 @@ private enum DataAgeKind: Int, CaseIterable, Identifiable {
     }
 }
 
+private struct SnapshotStat: Identifiable {
+    var id: String
+    var title: String
+    var value: String
+    var unit: String
+    var meaning: String
+    var meaningColor: Color
+}
+
 struct DataView: View {
     var state: UserRecoveryState
     var onOpenSettings: () -> Void = {}
@@ -66,9 +75,10 @@ struct DataView: View {
                         pageDots
 
                         if state.hasCompletedBaseline {
-                            riskSection
-                            vitalsSection
-                            factorSection
+                            selectedDeltaCard
+                            compareSection
+                            snapshotSection
+                            yearsSection
                         }
 
                         telemetryButton
@@ -169,109 +179,142 @@ struct DataView: View {
         .onTapGesture { select(kind) }
     }
 
-    private var riskSection: some View {
+    private var selectedDeltaCard: some View {
+        let years = yearsVsReal(selected)
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(deltaHeadline(for: selected, years: years))
+                .font(.system(size: 22, weight: .semibold, design: .rounded))
+                .foregroundStyle(deltaColor(years))
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Your Real Age is \(String(format: "%.1f", state.chronologicalAge)).")
+                .font(.system(size: 15, design: .rounded))
+                .foregroundStyle(Neu.muted)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(ConvexShape(shape: RoundedRectangle(cornerRadius: 22, style: .continuous)))
+    }
+
+    private var compareSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Event Risk vs Peers")
+            Text("Vs people your Real Age")
                 .font(Neu.serif(18, weight: .light))
                 .italic()
                 .foregroundStyle(Neu.ink)
 
             HStack(spacing: 12) {
-                riskCard(
-                    title: "All-Cause Mortality",
-                    value: String(format: "%.2fx", state.mortalityRelativeRisk),
-                    detail: state.riskBand
-                )
-                riskCard(
-                    title: "Cardiac Events",
-                    value: String(format: "%.2fx", state.cardiacEventRelativeRisk),
-                    detail: "CHD / recovery"
-                )
+                compareCard(title: "Heart", relativeRisk: state.cardiacEventRelativeRisk)
+                compareCard(title: "Overall", relativeRisk: state.mortalityRelativeRisk)
             }
-
-            Text("Relative risk from Cole et al. NEJM 1999 (HRR), Zhang et al. CMAJ 2016 (resting HR), Tsuji et al. Circulation 1996 (HRV), and Levine / Liu phenotypic age acceleration.")
-                .font(.caption)
-                .foregroundStyle(Neu.muted)
         }
     }
 
-    private func riskCard(title: String, value: String, detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+    private func compareCard(title: String, relativeRisk: Double) -> some View {
+        let percent = Int(((relativeRisk - 1) * 100).rounded())
+        let even = abs(percent) < 5
+        let better = percent <= 0
+        let value = even ? "Even" : "\(abs(percent))%"
+        let detail = even
+            ? "Typical for your age"
+            : (better ? "lower risk" : "higher risk")
+
+        return VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(Neu.serif(13, weight: .light))
-                .italic()
+                .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundStyle(Neu.muted)
             Text(value)
-                .font(.title2.monospacedDigit().weight(.semibold))
-                .foregroundStyle(Neu.ink)
+                .font(.system(size: 36, weight: .semibold, design: .rounded))
+                .foregroundStyle(even ? Neu.ink : (better ? Neu.younger : Neu.older))
+                .monospacedDigit()
             Text(detail)
-                .font(.caption)
-                .foregroundStyle(Neu.muted)
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundStyle(even ? Neu.muted : (better ? Neu.younger : Neu.older))
         }
-        .padding(14)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ConvexShape(shape: RoundedRectangle(cornerRadius: 18, style: .continuous)))
+        .background(ConvexShape(shape: RoundedRectangle(cornerRadius: 20, style: .continuous)))
     }
 
-    private var vitalsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Latest Scan & Apple Health")
-                .font(Neu.serif(18, weight: .light))
-                .italic()
-                .foregroundStyle(Neu.ink)
+    private var snapshotSection: some View {
+        let stats = snapshotStats
+        return Group {
+            if !stats.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("From your last scan")
+                        .font(Neu.serif(18, weight: .light))
+                        .italic()
+                        .foregroundStyle(Neu.ink)
 
-            VStack(alignment: .leading, spacing: 8) {
-                vitalRow("Source", state.isUsingLiveHealthKit ? "Apple Health + PreSage" : "PreSage / demo")
-                if let scan = state.latestScan {
-                    vitalRow("Camera HR", "\(scan.cameraHeartRate) BPM")
-                    vitalRow("HRR drop", "\(scan.hrrObserved) BPM")
-                    vitalRow("Respiratory rate", String(format: "%.1f /min", scan.respiratoryRate))
-                    vitalRow("Vascular score", String(format: "%.0f", scan.vascularScore))
-                    vitalRow("Signal quality", String(format: "%.0f", scan.signalQuality))
-                }
-                vitalRow("7-day HRV", "\(state.garminData.hrvStatus) ms")
-                vitalRow("Resting HR", "\(state.garminData.restingHeartRate) BPM")
-                vitalRow("Sleep", "\(state.garminData.sleepScore)%")
-                if state.recentPeakHeartRate > 0 {
-                    vitalRow("Recent peak HR", "\(state.recentPeakHeartRate) BPM")
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                        ForEach(stats) { stat in
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(stat.title)
+                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                    .foregroundStyle(Neu.muted)
+                                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                    Text(stat.value)
+                                        .font(.system(size: 32, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(Neu.ink)
+                                        .monospacedDigit()
+                                    if !stat.unit.isEmpty {
+                                        Text(stat.unit)
+                                            .font(.system(size: 13, design: .rounded))
+                                            .foregroundStyle(Neu.muted)
+                                    }
+                                }
+                                Text(stat.meaning)
+                                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(stat.meaningColor)
+                            }
+                            .padding(16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(ConvexShape(shape: RoundedRectangle(cornerRadius: 20, style: .continuous)))
+                        }
+                    }
                 }
             }
-            .padding(16)
-            .background(ConvexShape(shape: RoundedRectangle(cornerRadius: 20, style: .continuous)))
         }
     }
 
-    private func vitalRow(_ label: String, _ value: String) -> some View {
-        HStack {
-            Text(label)
-                .font(.body)
-                .foregroundStyle(Neu.muted)
-            Spacer()
-            Text(value)
-                .font(.body.monospacedDigit())
-                .foregroundStyle(Neu.ink)
-        }
-    }
-
-    private var factorSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Age Factor Breakdown")
-                .font(Neu.serif(18, weight: .light))
-                .italic()
-                .foregroundStyle(Neu.ink)
-
-            ForEach(state.factorBreakdown) { factor in
-                HStack {
-                    Text(factor.title)
-                        .font(.body)
+    private var yearsSection: some View {
+        let factors = visibleFactors
+        return Group {
+            if !factors.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("What’s adding years")
+                        .font(Neu.serif(18, weight: .light))
+                        .italic()
                         .foregroundStyle(Neu.ink)
-                    Spacer()
-                    Text(String(format: "%+.1f yrs", factor.yearsDelta))
-                        .font(.body.monospacedDigit())
-                        .foregroundStyle(factor.isNegative ? Neu.older : Neu.younger)
+
+                    VStack(alignment: .leading, spacing: 14) {
+                        ForEach(factors) { factor in
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Text(friendlyFactor(factor.title))
+                                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                                        .foregroundStyle(Neu.ink)
+                                    Spacer()
+                                    Text(yearDeltaLabel(factor.yearsDelta))
+                                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                        .foregroundStyle(factor.yearsDelta > 0.05 ? Neu.older : Neu.younger)
+                                        .monospacedDigit()
+                                }
+                                GeometryReader { geo in
+                                    ZStack(alignment: .leading) {
+                                        Capsule()
+                                            .fill(Neu.ink.opacity(0.08))
+                                        Capsule()
+                                            .fill(factor.yearsDelta > 0.05 ? Neu.older : Neu.younger)
+                                            .frame(width: geo.size.width * factorBarWidth(factor.yearsDelta))
+                                    }
+                                }
+                                .frame(height: 7)
+                            }
+                        }
+                    }
+                    .padding(16)
+                    .background(ConvexShape(shape: RoundedRectangle(cornerRadius: 20, style: .continuous)))
                 }
-                .padding(14)
-                .background(ConvexShape(shape: RoundedRectangle(cornerRadius: 16, style: .continuous)))
             }
         }
     }
@@ -280,7 +323,7 @@ struct DataView: View {
         Button {
             showTelemetry = true
         } label: {
-            Text("Log Context & Telemetry")
+            Text("Log extra context")
                 .font(Neu.serif(16, weight: .light))
                 .italic()
                 .foregroundStyle(Neu.ink)
@@ -299,19 +342,19 @@ struct DataView: View {
 
             methodologyCard(
                 title: "Biological Age",
-                body: "Your overall biological age is 50% cardiac, 30% pulmonary, and 20% chronological, then lifestyle penalties. It blends the Presage SmartSpectra camera scan with Apple Health 7-day HRV and resting heart rate."
+                body: "A blend of your heart, lungs, and Real Age, then sleep and movement from Apple Health. Younger than Real Age means your body is tracking ahead of the calendar."
             )
             methodologyCard(
                 title: "Cardiac Age",
-                body: "Cardiac age uses PreSage heart-rate recovery against an age-expected HRR, plus Apple Health HRV. A larger post-effort drop usually means a younger cardiac age."
+                body: "How quickly your heart calms down after effort, plus your resting pulse. A faster drop reads as a younger heart."
             )
             methodologyCard(
                 title: "Pulmonary Age",
-                body: "Pulmonary age comes from respiratory rate in the rPPG scan versus a 14 breath/min baseline. Easier breathing under strain points to a younger pulmonary age."
+                body: "How fast you were breathing in the scan. Easier, slower breathing under strain reads as younger lungs."
             )
             methodologyCard(
-                title: "Mortality and Cardiac Risk",
-                body: "Relative risk uses published cohorts: Cole 1999 (HRR and death), Zhang 2016 (resting HR), Tsuji 1996 Framingham (HRV), and phenotypic age acceleration. This is an estimate, not a diagnosis."
+                title: "Heart and overall comparison",
+                body: "These percentages compare your recovery and resting pulse with people who share your Real Age. They are estimates, not a diagnosis."
             )
         }
     }
@@ -399,14 +442,175 @@ struct DataView: View {
         select(kinds[next])
     }
 
-    private func formattedAge(_ kind: DataAgeKind) -> String {
-        let value: Double
+    private func ageValue(_ kind: DataAgeKind) -> Double {
         switch kind {
-        case .cardiac: value = state.cardiacAge
-        case .biological: value = state.biologicalAge
-        case .pulmonary: value = state.respiratoryAge
+        case .cardiac: state.cardiacAge
+        case .biological: state.biologicalAge
+        case .pulmonary: state.respiratoryAge
         }
-        return String(format: "%.1f", value)
+    }
+
+    private func formattedAge(_ kind: DataAgeKind) -> String {
+        String(format: "%.1f", ageValue(kind))
+    }
+
+    private func yearsVsReal(_ kind: DataAgeKind) -> Double {
+        ageValue(kind) - state.chronologicalAge
+    }
+
+    private func deltaColor(_ years: Double) -> Color {
+        abs(years) < 0.15 ? Neu.ink : (years < 0 ? Neu.younger : Neu.older)
+    }
+
+    private func deltaHeadline(for kind: DataAgeKind, years: Double) -> String {
+        if abs(years) < 0.15 {
+            return "\(kind.title) matches your Real Age."
+        }
+        let amount = String(format: "%.1f", abs(years))
+        return years < 0
+            ? "\(amount) years younger than Real Age."
+            : "\(amount) years older than Real Age."
+    }
+
+    private var snapshotStats: [SnapshotStat] {
+        var stats: [SnapshotStat] = []
+        let pulse = state.latestScan.flatMap { $0.cameraHeartRate > 0 ? $0.cameraHeartRate : nil }
+            ?? (state.garminData.restingHeartRate > 0 ? state.garminData.restingHeartRate : nil)
+        if let pulse {
+            stats.append(
+                SnapshotStat(
+                    id: "pulse",
+                    title: "Pulse",
+                    value: "\(pulse)",
+                    unit: "bpm",
+                    meaning: pulseMeaning(pulse),
+                    meaningColor: pulse <= 70 ? Neu.younger : Neu.older
+                )
+            )
+        }
+        if let scan = state.latestScan, scan.respiratoryRate > 0 {
+            let rate = Int(scan.respiratoryRate.rounded())
+            stats.append(
+                SnapshotStat(
+                    id: "breathing",
+                    title: "Breathing",
+                    value: "\(rate)",
+                    unit: "/min",
+                    meaning: breathingMeaning(scan.respiratoryRate),
+                    meaningColor: scan.respiratoryRate <= 16 ? Neu.younger : Neu.older
+                )
+            )
+        }
+        if let scan = state.latestScan, scan.hrrObserved > 0 {
+            stats.append(
+                SnapshotStat(
+                    id: "recovery",
+                    title: "Recovery",
+                    value: "\(scan.hrrObserved)",
+                    unit: "beats",
+                    meaning: recoveryMeaning(scan.hrrObserved),
+                    meaningColor: scan.hrrObserved >= 18 ? Neu.younger : Neu.older
+                )
+            )
+        }
+        if state.latestScan != nil {
+            let score = state.latestScan?.stressScore ?? 0
+            stats.append(
+                SnapshotStat(
+                    id: "stress",
+                    title: "Stress",
+                    value: score > 0 ? String(format: "%.0f", score) : "--",
+                    unit: "",
+                    meaning: stressMeaning(score),
+                    meaningColor: stressColor(score)
+                )
+            )
+        }
+        if state.garminData.sleepScore > 0 {
+            stats.append(
+                SnapshotStat(
+                    id: "sleep",
+                    title: "Sleep",
+                    value: "\(state.garminData.sleepScore)",
+                    unit: "%",
+                    meaning: sleepMeaning(state.garminData.sleepScore),
+                    meaningColor: state.garminData.sleepScore >= 75 ? Neu.younger : Neu.older
+                )
+            )
+        }
+        return stats
+    }
+
+    private var visibleFactors: [AgeFactor] {
+        state.factorBreakdown
+            .filter { abs($0.yearsDelta) >= 0.15 }
+            .sorted { abs($0.yearsDelta) > abs($1.yearsDelta) }
+    }
+
+    private var maxFactorYears: Double {
+        max(visibleFactors.map { abs($0.yearsDelta) }.max() ?? 1, 0.8)
+    }
+
+    private func factorBarWidth(_ years: Double) -> CGFloat {
+        CGFloat(min(1, abs(years) / maxFactorYears))
+    }
+
+    private func yearDeltaLabel(_ years: Double) -> String {
+        if abs(years) < 0.15 { return "0 yrs" }
+        return String(format: "%+.1f yrs", years)
+    }
+
+    private func friendlyFactor(_ title: String) -> String {
+        let lower = title.lowercased()
+        if lower.contains("cardiac") { return "Heart recovery" }
+        if lower.contains("respiratory") { return "Breathing" }
+        if lower.contains("hrv") { return "Day-to-day recovery" }
+        if lower.contains("resting") { return "Resting pulse" }
+        if lower.contains("vascular") { return "Circulation" }
+        if lower.contains("sleep") { return "Sleep" }
+        if lower.contains("step") { return "Daily movement" }
+        return title
+    }
+
+    private func pulseMeaning(_ bpm: Int) -> String {
+        if bpm < 55 { return "Very calm" }
+        if bpm <= 70 { return "Steady" }
+        if bpm <= 85 { return "A bit high" }
+        return "Running high"
+    }
+
+    private func breathingMeaning(_ rate: Double) -> String {
+        if rate <= 14 { return "Easy pace" }
+        if rate <= 18 { return "Typical" }
+        return "Working hard"
+    }
+
+    private func recoveryMeaning(_ drop: Int) -> String {
+        if drop >= 25 { return "Calmed down fast" }
+        if drop >= 18 { return "Solid bounce-back" }
+        if drop >= 12 { return "Average recovery" }
+        return "Slow to settle"
+    }
+
+    private func stressMeaning(_ score: Double) -> String {
+        if score <= 0 { return "Not captured yet" }
+        if score <= 80 { return "Calm" }
+        if score <= 150 { return "Typical" }
+        if score <= 300 { return "Elevated" }
+        return "Running high"
+    }
+
+    private func stressColor(_ score: Double) -> Color {
+        if score <= 0 { return Neu.muted }
+        if score <= 150 { return Neu.younger }
+        return Neu.older
+    }
+
+    private func sleepMeaning(_ score: Int) -> String {
+        if score >= 85 { return "Rested" }
+        if score >= 75 { return "Decent night" }
+        if score >= 60 { return "Short on rest" }
+        return "Worn down"
     }
 }
 

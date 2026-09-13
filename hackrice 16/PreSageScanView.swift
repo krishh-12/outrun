@@ -93,6 +93,11 @@ struct PreSageScanView: View {
         return formatMetric(value, digits: 1, suffix: " ms")
     }
 
+    private var capturedStressScore: Double {
+        guard let value = displayedHrv?.baevsky, value.isFinite, value > 0 else { return 0 }
+        return Double(value)
+    }
+
     private var pulseConfidenceColor: Color {
         confidenceColor(latestPulse?.confidence)
     }
@@ -572,6 +577,7 @@ struct PreSageScanView: View {
         let breath = latestBreathing.map { Double($0.value) } ?? 16.5
         let quality = Double(latestPulse?.confidence ?? 70)
         let rmssd = displayedHrv.flatMap { $0.rmssd > 0 ? Double($0.rmssd) : nil }
+        let stressScore = capturedStressScore
 
         Task {
             await stopMeasurement()
@@ -595,7 +601,8 @@ struct PreSageScanView: View {
                     vascularScore: min(100, max(8, quality)),
                     minutesSinceAerobicActivity: minutesSinceAerobicActivity,
                     cameraHeartRate: Int(cameraHR.rounded()),
-                    signalQuality: min(100, max(0, quality))
+                    signalQuality: min(100, max(0, quality)),
+                    stressScore: stressScore
                 )
                 isSaving = false
                 onFinished()

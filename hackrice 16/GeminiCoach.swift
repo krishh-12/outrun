@@ -266,6 +266,8 @@ enum GeminiCoach {
                 "respiratoryRate": scan?.respiratoryRate as Any,
                 "hrrObserved": scan?.hrrObserved as Any,
                 "signalQuality": scan?.signalQuality as Any,
+                "stressScore": scan?.stressScore as Any,
+                "stressScoreSource": "Presage Baevsky Stress Index from HRV",
                 "scanCount": state.scanHistory.count
             ],
             "wearables": [
