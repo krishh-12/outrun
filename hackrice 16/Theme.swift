@@ -395,12 +395,6 @@ struct ConvexShape<S: Shape>: View {
     var body: some View {
         shape
             .fill(isPressed ? Neu.inset : Neu.raised)
-            .overlay(
-                shape.stroke(
-                    isPressed ? Neu.darkShadow.opacity(0.18) : Neu.highlight,
-                    lineWidth: isPressed ? 0.6 : 1
-                )
-            )
             .shadow(
                 color: isPressed ? Neu.darkShadow : Neu.lightShadow,
                 radius: isPressed ? 5 : 11,
