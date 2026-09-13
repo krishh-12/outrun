@@ -9,9 +9,16 @@ import SwiftUI
 
 @main
 struct hackrice_16App: App {
+    @State private var authService = AuthService()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .environment(authService)
+                .background(Neu.canvas.ignoresSafeArea())
+                .onOpenURL { url in
+                    authService.handleOpenURL(url)
+                }
         }
     }
 }
