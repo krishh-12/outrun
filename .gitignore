@@ -5,3 +5,7 @@ DerivedData/
 .env
 .env.*
 *.moved-aside
+Secrets.xcconfig
+**/Secrets.plist
+.idea/
+*.swp

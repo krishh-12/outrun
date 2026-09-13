@@ -5,10 +5,12 @@
 outrunn is an iOS app that estimates Real, Biological, Cardiac, and Pulmonary age from a phone-camera Presage scan plus Apple Health (or demo) vitals, then turns those numbers into a recovery plan. Local models own the math. Gemini interprets the same numbers on demand. It does not watch the video.
 
 <p align="center">
-  <img src="hackrice 16/outrunn-logo.png" alt="outrunn — outrun your age" width="560" />
+  <img src="outrunn/Brand/outrunn-logo.png" alt="outrunn — outrun your age" width="560" />
 </p>
 
 This repo is the HackRice 16 iOS app (`outrunn.app`, bundle id `com.krish.outrun`).
+
+**Public repo:** keep keys out of git. See [SECURITY.md](SECURITY.md). If you cloned an older commit that still had live keys, rotate them.
 
 ---
 
@@ -129,31 +131,37 @@ Demo mode injects canned scenarios when HealthKit is unavailable (simulator).
 | Persistence | `RecoveryPersistence` Codable snapshots + Keychain session |
 | Type | Newsreader (headings), Outfit (UI/body), system serif italic for the **outrunn** wordmark only |
 
-Visual language: cream canvas, eggshell raised surfaces (`ConvexShape`), gray shadows, teal accent. Shared tokens live in `Theme.swift` (`Neu`).
+Visual language: cream canvas, eggshell raised surfaces (`ConvexShape`), gray shadows, teal accent. Shared tokens live in `outrunn/Theme/Theme.swift` (`Neu`).
 
 ---
 
 ## Repository layout
 
 ```
-hackrice 16.xcodeproj/          Xcode project (scheme: hackrice 16)
-hackrice 16/
-  hackrice_16App.swift          App entry, font registration
-  RootView.swift                Splash → auth → device setup → shell
-  MainShellView.swift           Tabs, Insights, History, Add
-  DashboardView.swift           Scan CTA + charts
-  DataView.swift                Ages, risk, methodology
-  PreSageScanView.swift         SmartSpectra session + HUD
-  GeminiCoach.swift             Plan + roadrunner
-  RecoveryModels.swift          State, ages, risk, scans
-  RecoveryPersistence.swift     Snapshot load/save
-  HealthKitManager.swift        Health reads
-  AuthService.swift             Apple / Google / email
-  Theme.swift                   Color, type, wordmark, neumorphic shapes
-  Fonts/                        Newsreader + Outfit
-  outrunn-logo.png              Wordmark lockup
-  Info.plist                    Usage strings, URL types, API keys
+outrunn.xcodeproj/                 Xcode project (scheme: outrunn)
+Secrets.xcconfig.example           Placeholder key names (copy locally; gitignored)
+SECURITY.md
+outrunn/
+  App/                             OutrunnApp, RootView
+  Theme/                           Neu tokens, wordmark, Fonts/
+  Features/
+    Splash/                        SplashView
+    Auth/                          SignUp, AuthService, Keychain
+    Shell/                         MainShellView (tabs)
+    Dashboard/                     charts + scan CTA
+    Scan/                          PresageScanView, workout recency sheet
+    Data/                          ages, risk, methodology, telemetry
+    Insights/                      InsightsView, GeminiCoach
+    History/                       HistoryView
+    Add/                           wearables + device link
+    Settings/                      SettingsView
+  Models/                          recovery state, persistence, risk engine
+  Health/                          HealthKitManager
+  Resources/                       Info.plist, entitlements, Assets
+  Brand/                           outrunn-logo.png
 ```
+
+File names match the type they contain (`InsightsView.swift` → `InsightsView`).
 
 ---
 
@@ -168,9 +176,9 @@ hackrice 16/
 
 ### Run
 
-1. Clone the repo and open `hackrice 16.xcodeproj`.
-2. Select the **hackrice 16** scheme and an iPhone destination.
-3. Put keys in `hackrice 16/Info.plist` (see below).
+1. Clone the repo and open `outrunn.xcodeproj`.
+2. Select the **outrunn** scheme and an iPhone destination.
+3. In `outrunn/Resources/Info.plist`, replace the `PASTE_…` placeholders (see [SECURITY.md](SECURITY.md)). Do not commit real keys.
 4. For Google Sign-In, replace `PASTE_IOS_CLIENT_ID` in `GIDClientID`, `REVERSED_CLIENT_ID`, and the URL scheme.
 5. Build and run. On device, allow **Camera** and **Health** when prompted.
 
@@ -183,9 +191,9 @@ hackrice 16/
 | `GEMINI_PROJECT_NUMBER` | Gemini project |
 | `GIDClientID` / `REVERSED_CLIENT_ID` / URL scheme | Google Sign-In |
 | `NSCameraUsageDescription` | Camera prompt |
-| Health usage strings | Set on the target (`INFOPLIST_KEY_NSHealthShareUsageDescription`, update description) |
+| Health usage strings | Set on the target (`INFOPLIST_KEY_NSHealthShareUsageDescription`) |
 
-Do not commit production secrets to a public fork. Rotate anything that has already been checked in.
+Never commit production secrets. Keys that appeared on `main` before this cleanup must be rotated.
 
 ---
 
