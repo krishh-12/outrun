@@ -1,6 +1,7 @@
 # outrunn
 
 **outrun your age**
+
 Built by: Amulya Bisaria, Anish Koduri, Krish Hariharan, and Srivanth Rudrangi for HackRice 16
 
 outrunn is an iOS app that estimates Real, Biological, Cardiac, and Pulmonary age from a phone-camera Presage scan plus Apple Health (or demo) vitals, then turns those numbers into a recovery plan. Local models own the math. Gemini interprets the same numbers on demand. It does not watch the video.
